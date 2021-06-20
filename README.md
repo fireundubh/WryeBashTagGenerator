@@ -2,7 +2,7 @@
 
 xEdit script for generating tags for Wrye Bash
 
-## Supported tags
+## Unsupported tags
 
 All tags are supported except those that require the user's explicit intent.
 
