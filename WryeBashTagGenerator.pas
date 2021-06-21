@@ -112,7 +112,7 @@ var
   i            : integer;
 begin
   sScriptName    := 'WryeBashTagGenerator';
-  sScriptVersion := '1.6.4.0';
+  sScriptVersion := '1.6.4.1';
   sScriptAuthor  := 'fireundubh';
   sScriptEmail   := 'fireundubh@gmail.com';
 
