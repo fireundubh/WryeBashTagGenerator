@@ -83,28 +83,28 @@ begin
 end;
 
 
-procedure LogInfo(s: String);
+procedure LogInfo(AText: string);
 begin
-  AddMessage('[INFO] ' + s);
+  AddMessage('[INFO] ' + AText);
 end;
 
 
-procedure LogWarn(s: String);
+procedure LogWarn(AText: string);
 begin
-  AddMessage('[WARN] ' + s);
+  AddMessage('[WARN] ' + AText);
 end;
 
 
-procedure LogError(s: String);
+procedure LogError(AText: string);
 begin
-  AddMessage('[ERRO] ' + s);
+  AddMessage('[ERRO] ' + AText);
 end;
 
 
 function Initialize: integer;
 var
-  kDescription : IInterface;
-  kHeader      : IInterface;
+  kDescription : IwbElement;
+  kHeader      : IwbElement;
   sBashTags    : string;
   sDescription : string;
   sMasterName  : string;
@@ -112,7 +112,7 @@ var
   i            : integer;
 begin
   sScriptName    := 'WryeBashTagGenerator';
-  sScriptVersion := '1.6.4.2';
+  sScriptVersion := '1.6.4.3';
   sScriptAuthor  := 'fireundubh';
   sScriptEmail   := 'fireundubh@gmail.com';
 
@@ -287,9 +287,9 @@ begin
 end;
 
 
-function ProcessRecord(e: IInterface): integer;
+function ProcessRecord(e: IwbMainRecord): integer;
 var
-  o             : IInterface;
+  o             : IwbMainRecord;
   sSignature    : string;
   ConflictState : TConflictThis;
   iFormID       : integer;
@@ -718,25 +718,25 @@ begin
 end;
 
 
-function StrToBool(s: String): boolean;
+function StrToBool(AValue: string): boolean;
 begin
-  if (s <> '0') and (s <> '1') then
+  if (AValue <> '0') and (AValue <> '1') then
     Result := nil
   else
-    Result := (s = '1');
+    Result := (AValue = '1');
 end;
 
 
-function RegExMatch(asPattern: string; asSubject: string): string;
+function RegExMatch(AExpr: string; ASubj: string): string;
 var
   re     : TPerlRegEx;
 begin
-  Result := asSubject;
+  Result := ASubj;
   re := TPerlRegEx.Create;
   try
-    re.RegEx := asPattern;
+    re.RegEx := AExpr;
     re.Options := [];
-    re.Subject := asSubject;
+    re.Subject := ASubj;
     if re.Match then
       Result := re.MatchedText;
   finally
@@ -745,178 +745,142 @@ begin
 end;
 
 
-function RegExReplace(const asExpression: string; asReplacement: string; asSubject: string): string;
+function RegExReplace(const AExpr: string; ARepl: string; ASubj: string): string;
 var
-  re     : TPerlRegEx;
-  output : string;
+  re      : TPerlRegEx;
+  sResult : string;
 begin
-  Result := asSubject;
+  Result := ASubj;
   re := TPerlRegEx.Create;
   try
-    re.RegEx := asExpression;
+    re.RegEx := AExpr;
     re.Options := [];
-    re.Subject := asSubject;
-    re.Replacement := asReplacement;
+    re.Subject := ASubj;
+    re.Replacement := ARepl;
     re.ReplaceAll;
-    output := re.Subject;
+    sResult := re.Subject;
   finally
     re.Free;
-    Result := output;
+    Result := sResult;
   end;
 end;
 
 
-function SortKeyEx(const akElement: IInterface): string;
+function EditValues(const AElement: IwbElement): string;
 var
   kElement : IInterface;
   sName    : string;
   i        : integer;
 begin
-  Result := GetEditValue(akElement);
+  Result := GetEditValue(AElement);
 
-  for i := 0 to Pred(ElementCount(akElement)) do
+  for i := 0 to Pred(ElementCount(AElement)) do
   begin
-    kElement := ElementByIndex(akElement, i);
+    kElement := ElementByIndex(AElement, i);
     sName    := Name(kElement);
 
     if SameText(sName, 'unknown') or SameText(sName, 'unused') then
       Continue;
 
     if Result <> '' then
-      Result := Result + ' ' + SortKeyEx(kElement)
+      Result := Result + ' ' + EditValues(kElement)
     else
-      Result := SortKeyEx(kElement);
+      Result := EditValues(kElement);
   end;
 end;
 
 
-function CompareAssignment(e: IInterface; m: IInterface): boolean;
-var
-  bAssignedE : boolean;
-  bAssignedM : boolean;
+function CompareAssignment(AElement: IwbElement; AMaster: IwbElement): boolean;
 begin
+  Result := False;
+
   if TagExists(g_sTag) then
     Exit;
 
-  Result := False;
-
-  bAssignedE := Assigned(e);
-  bAssignedM := Assigned(m);
-
-  if (not bAssignedE and not bAssignedM)
-  or (bAssignedE and bAssignedM) then
+  if not Assigned(AElement) and not Assigned(AMaster) then
     Exit;
 
-  if bAssignedE <> bAssignedM then
+  if Assigned(AElement) and Assigned(AMaster) then
+    Exit;
+
+  if Assigned(AElement) <> Assigned(AMaster) then
   begin
-    AddLogEntry('Assigned', e, m);
+    AddLogEntry('Assigned', AElement, AMaster);
     slSuggestedTags.Add(g_sTag);
     Result := True;
   end;
 end;
 
 
-function CompareElementCount(e: IInterface; m: IInterface): boolean;
-var
-  iCountE : integer;
-  iCountM : integer;
+function CompareElementCount(AElement: IwbElement; AMaster: IwbElement): boolean;
 begin
+  Result := False;
+
   if TagExists(g_sTag) then
     Exit;
 
-  Result := False;
-
-  iCountE := ElementCount(e);
-  iCountM := ElementCount(m);
-
-  if iCountE = iCountM then
+  if ElementCount(AElement) = ElementCount(AMaster) then
     Exit;
 
-  if iCountE <> iCountM then
-  begin
-    AddLogEntry('ElementCount', e, m);
-    slSuggestedTags.Add(g_sTag);
-    Result := True;
-  end;
+  AddLogEntry('ElementCount', AElement, AMaster);
+  slSuggestedTags.Add(g_sTag);
+
+  Result := True;
 end;
 
 
-function CompareElementCountAdd(e: IInterface; m: IInterface): boolean;
-var
-  iCountE : integer;
-  iCountM : integer;
+function CompareElementCountAdd(AElement: IwbElement; AMaster: IwbElement): boolean;
 begin
+  Result := False;
+
   if TagExists(g_sTag) then
     Exit;
 
-  Result := False;
-
-  iCountE := ElementCount(e);
-  iCountM := ElementCount(m);
-
-  if iCountE = iCountM then
+  if ElementCount(AElement) <= ElementCount(AMaster) then
     Exit;
 
-  if iCountE < iCountM then
-  begin
-    AddLogEntry('ElementCountAdd', e, m);
-    slSuggestedTags.Add(g_sTag);
-    Result := True;
-  end;
+  AddLogEntry('ElementCountAdd', AElement, AMaster);
+  slSuggestedTags.Add(g_sTag);
+
+  Result := True;
 end;
 
 
-function CompareElementCountRemove(e: IInterface; m: IInterface): boolean;
-var
-  iCountE : integer;
-  iCountM : integer;
+function CompareElementCountRemove(AElement: IwbElement; AMaster: IwbElement): boolean;
 begin
+  Result := False;
+
   if TagExists(g_sTag) then
     Exit;
 
-  Result := False;
-
-  iCountE := ElementCount(e);
-  iCountM := ElementCount(m);
-
-  if iCountE = iCountM then
+  if ElementCount(AElement) >= ElementCount(AMaster) then
     Exit;
 
-  if iCountE > iCountM then
-  begin
-    AddLogEntry('ElementCountRemove', e, m);
-    slSuggestedTags.Add(g_sTag);
-    Result := True;
-  end;
+  AddLogEntry('ElementCountRemove', AElement, AMaster);
+  slSuggestedTags.Add(g_sTag);
+
+  Result := True;
 end;
 
 
-function CompareEditValue(e: IInterface; m: IInterface): boolean;
-var
-  sValueE : string;
-  sValueM : string;
+function CompareEditValue(AElement: IwbElement; AMaster: IwbElement): boolean;
 begin
+  Result := False;
+
   if TagExists(g_sTag) then
     Exit;
 
-  Result := False;
-
-  sValueE := GetEditValue(e);
-  sValueM := GetEditValue(m);
-
-  if SameText(sValueE, sValueM) then
+  if SameText(GetEditValue(AElement), GetEditValue(AMaster)) then
     Exit;
 
-  if not SameText(sValueE, sValueM) then
-  begin
-    AddLogEntry('GetEditValue', e, m);
-    slSuggestedTags.Add(g_sTag);
-    Result := True;
-  end;
+  AddLogEntry('GetEditValue', AElement, AMaster);
+  slSuggestedTags.Add(g_sTag);
+
+  Result := True;
 end;
 
 
-function CompareFlags(e: IInterface; m: IInterface; asPath: string; asFlagName: string; abAddTag: boolean; abOperation: boolean): boolean;
+function CompareFlags(AElement: IwbElement; AMaster: IwbElement; APath: string; AFlagName: string; ASuggest: boolean; ANotOperator: boolean): boolean;
 var
   x         : IInterface;
   y         : IInterface;
@@ -927,111 +891,104 @@ var
   sTestName : string;
   bResult   : boolean;
 begin
+  Result := False;
+
   if TagExists(g_sTag) then
     Exit;
 
-  Result := False;
-
   // flags arrays
-  x := ElementByPath(e, asPath);
-  y := ElementByPath(m, asPath);
+  x := ElementByPath(AElement, APath);
+  y := ElementByPath(AMaster, APath);
 
   // individual flags
-  a := ElementByName(x, asFlagName);
-  b := ElementByName(y, asFlagName);
+  a := ElementByName(x, AFlagName);
+  b := ElementByName(y, AFlagName);
 
   // individual flag edit values
   sa := GetEditValue(a);
   sb := GetEditValue(b);
 
-  if abOperation then
-    bResult := not SameText(sa, sb)  // only used for Behave Like Exterior, Use Sky Lighting, and Has Water
+  if ANotOperator then
+    Result := not SameText(sa, sb)  // only used for Behave Like Exterior, Use Sky Lighting, and Has Water
   else
-    bResult := StrToBool(sa) or StrToBool(sb);
+    Result := StrToBool(sa) or StrToBool(sb);
 
-  if abAddTag and bResult then
+  if ASuggest and Result then
   begin
-    sTestName := IfThen(abOperation, 'CompareFlags:NOT', 'CompareFlags:OR');
+    sTestName := IfThen(ANotOperator, 'CompareFlags:NOT', 'CompareFlags:OR');
     AddLogEntry(sTestName, x, y);
     slSuggestedTags.Add(g_sTag);
   end;
-
-  Result := bResult;
 end;
 
 
-function CompareKeys(e: IInterface; m: IInterface): boolean;
+function CompareKeys(AElement: IwbElement; AMaster: IwbElement): boolean;
 var
-  bResult       : boolean;
-  sKeyE         : string;
-  sKeyM         : string;
-  ConflictState : TConflictThis;
+  sElementEditValues : string;
+  sMasterEditValues  : string;
+  ConflictState      : TConflictThis;
 begin
+  Result := False;
+
   if TagExists(g_sTag) then
     Exit;
 
-  Result := False;
-
-  ConflictState := ConflictAllForMainRecord(ContainingMainRecord(e));
+  ConflictState := ConflictAllForMainRecord(ContainingMainRecord(AElement));
 
   if (ConflictState = caUnknown)
   or (ConflictState = caOnlyOne)
   or (ConflictState = caNoConflict) then
     Exit;
 
-  sKeyE := SortKeyEx(e);
-  sKeyM := SortKeyEx(m);
+  sElementEditValues := EditValues(AElement);
+  sMasterEditValues  := EditValues(AMaster);
 
-  // empty check
-  if (IsEmptyKey(sKeyE) and IsEmptyKey(sKeyM))
-  or SameText(sKeyE, sKeyM) then
+  if IsEmptyKey(sElementEditValues) and IsEmptyKey(sMasterEditValues) then
     Exit;
 
-  // case sensitive comparison
-  if not SameText(sKeyE, sKeyM) then
-  begin
-    AddLogEntry('CompareKeys', e, m);
-    slSuggestedTags.Add(g_sTag);
-    Result := True;
-  end;
+  if SameText(sElementEditValues, sMasterEditValues) then
+    Exit;
+
+  AddLogEntry('CompareKeys', AElement, AMaster);
+  slSuggestedTags.Add(g_sTag);
+
+  Result := True;
 end;
 
 
-function CompareNativeValues(e: IInterface; m: IInterface; asPath: string): boolean;
+function CompareNativeValues(AElement: IwbElement; AMaster: IwbElement; APath: string): boolean;
 var
-  x : IInterface;
-  y : IInterface;
+  x : IwbElement;
+  y : IwbElement;
 begin
+  Result := False;
+
   if TagExists(g_sTag) then
     Exit;
 
-  Result := False;
-
-  x := ElementByPath(e, asPath);
-  y := ElementByPath(m, asPath);
+  x := ElementByPath(AElement, APath);
+  y := ElementByPath(AMaster, APath);
 
   if GetNativeValue(x) = GetNativeValue(y) then
     Exit;
 
-  if GetNativeValue(x) <> GetNativeValue(y) then
-  begin
-    AddLogEntry('CompareNativeValues', e, m);
-    slSuggestedTags.Add(g_sTag);
-    Result := True;
-  end;
+  AddLogEntry('CompareNativeValues', AElement, AMaster);
+  slSuggestedTags.Add(g_sTag);
+
+  Result := True;
 end;
 
 
-function SortedArrayElementByValue(e: IInterface; asPath: string; asValue: string): IInterface;
+function SortedArrayElementByValue(AElement: IwbElement; APath: string; AValue: string): IwbElement;
 var
   i      : integer;
-  kEntry : IInterface;
+  kEntry : IwbElement;
 begin
   Result := nil;
-  for i := 0 to Pred(ElementCount(e)) do
+  for i := 0 to Pred(ElementCount(AElement)) do
   begin
-    kEntry := ElementByIndex(e, i);
-    if SameText(GetElementEditValues(kEntry, asPath), asValue) then
+    kEntry := ElementByIndex(AElement, i);
+    if SameText(GetElementEditValues(kEntry, APath), AValue) then
     begin
       Result := kEntry;
       Exit;
@@ -1041,35 +998,35 @@ end;
 
 
 // TODO: natively implemented in 4.1.4
-procedure StringListDifference(aSetListA: TStringList; aSetListB: TStringList; aLH: TStringList);
+procedure StringListDifference(ASet: TStringList; AOtherSet: TStringList; AOutput: TStringList);
 var
   i : integer;
 begin
-  for i := 0 to Pred(aSetListA.Count) do
-    if aSetListB.IndexOf(aSetListA[i]) = -1 then
-      aLH.Add(aSetListA[i]);
+  for i := 0 to Pred(ASet.Count) do
+    if AOtherSet.IndexOf(ASet[i]) = -1 then
+      AOutput.Add(ASet[i]);
 end;
 
 
 // TODO: natively implemented in 4.1.4
-procedure StringListIntersection(aSetListA: TStringList; aSetListB: TStringList; aLH: TStringList);
+procedure StringListIntersection(ASet: TStringList; AOtherSet: TStringList; AOutput: TStringList);
 var
   i : integer;
 begin
-  for i := 0 to Pred(aSetListA.Count) do
-    if aSetListB.IndexOf(aSetListA[i]) > -1 then
-      aLH.Add(aSetListA[i]);
+  for i := 0 to Pred(ASet.Count) do
+    if AOtherSet.IndexOf(ASet[i]) > -1 then
+      AOutput.Add(ASet[i]);
 end;
 
 
 // TODO: speed this up!
-function IsEmptyKey(asSortKey: string): boolean;
+function IsEmptyKey(AEditValues: string): boolean;
 var
   i : integer;
 begin
   Result := True;
-  for i := 1 to Length(asSortKey) do
-    if asSortKey[i] = '1' then
+  for i := 1 to Length(AEditValues) do
+    if AEditValues[i] = '1' then
     begin
       Result := False;
       Exit;
@@ -1077,158 +1034,146 @@ begin
 end;
 
 
-function FormatTags(aslTags: TStringList; asSingular: string; asPlural: string; asNull: string): string;
-var
-  iTagCount : integer;
-  sTagCount : string;
+function FormatTags(ATags: TStringList; ASingular: string; APlural: string; ANull: string): string;
 begin
-  iTagCount := aslTags.Count;
-  sTagCount := IntToStr(iTagCount);
-
-  if iTagCount = 1 then
-    Result := sTagCount + ' ' + asSingular + #13#10#32#32#32#32#32#32
+  if ATags.Count = 1 then
+    Result := IntToStr(ATags.Count) + ' ' + ASingular + #13#10#32#32#32#32#32#32
   else
-  if iTagCount > 1 then
-    Result := sTagCount + ' ' + asPlural + #13#10#32#32#32#32#32#32;
+  if ATags.Count > 1 then
+    Result := IntToStr(ATags.Count) + ' ' + APlural + #13#10#32#32#32#32#32#32;
 
-  if iTagCount > 0 then
-    Result := Result + Format(' {{BASH:%s}}', [aslTags.DelimitedText])
+  if ATags.Count > 0 then
+    Result := Result + Format(' {{BASH:%s}}', [ATags.DelimitedText])
   else
-    Result := asNull;
+    Result := ANull;
 end;
 
 
-function TagExists(asTag: string): boolean;
+function TagExists(ATag: string): boolean;
 begin
-  Result := (slSuggestedTags.IndexOf(asTag) <> -1);
+  Result := (slSuggestedTags.IndexOf(ATag) <> -1);
 end;
 
 
-procedure Evaluate(e: IInterface; m: IInterface);
+procedure Evaluate(AElement: IwbElement; AMaster: IwbElement);
 begin
   // exit if the tag already exists
   if TagExists(g_sTag) then
     Exit;
 
   // Suggest tag if one element exists while the other does not
-  if CompareAssignment(e, m) then
+  if CompareAssignment(AElement, AMaster) then
     Exit;
 
   // exit if the first element does not exist
-  if not Assigned(e) then
+  if not Assigned(AElement) then
     Exit;
 
   // suggest tag if the two elements are different
-  if CompareElementCount(e, m) then
+  if CompareElementCount(AElement, AMaster) then
     Exit;
 
   // suggest tag if the edit values of the two elements are different
-  if CompareEditValue(e, m) then
+  if CompareEditValue(AElement, AMaster) then
     Exit;
 
   // compare any number of elements with CompareKeys
-  if CompareKeys(e, m) then
+  if CompareKeys(AElement, AMaster) then
     Exit;
 end;
 
 
-procedure EvaluateAdd(e: IInterface; m: IInterface);
+procedure EvaluateAdd(AElement: IwbElement; AMaster: IwbElement);
 begin
-  // exit if the tag already exists
   if TagExists(g_sTag) then
     Exit;
 
-  // exit if the first element does not exist
-  if not Assigned(e) then
+  if not Assigned(AElement) then
     Exit;
 
-  // suggest tag if the two elements are different
-  if CompareElementCountAdd(e, m) then
+  // suggest tag if the overriding element has more children than its master
+  if CompareElementCountAdd(AElement, AMaster) then
     Exit;
 end;
 
 
-procedure EvaluateChange(e: IInterface; m: IInterface);
+procedure EvaluateChange(AElement: IwbElement; AMaster: IwbElement);
 begin
-  // exit if the tag already exists
   if TagExists(g_sTag) then
     Exit;
 
-  // exit if the first element does not exist
-  if not Assigned(e) then
+  if not Assigned(AElement) then
     Exit;
 
   // suggest tag if the two elements and their descendants have different contents
-  if CompareKeys(e, m) then
+  if CompareKeys(AElement, AMaster) then
     Exit;
 end;
 
 
-procedure EvaluateRemove(e: IInterface; m: IInterface);
+procedure EvaluateRemove(AElement: IwbElement; AMaster: IwbElement);
 begin
-  // exit if the tag already exists
   if TagExists(g_sTag) then
     Exit;
 
-  // exit if the first element does not exist
-  if not Assigned(e) then
+  if not Assigned(AElement) then
     Exit;
 
-  // suggest tag if the two elements are different
-  if CompareElementCountRemove(e, m) then
+  // suggest tag if the master element has more children than its override
+  if CompareElementCountRemove(AElement, AMaster) then
     Exit;
 end;
 
 
-procedure EvaluateByPath(e: IInterface; m: IInterface; asPath: string);
+procedure EvaluateByPath(AElement: IwbElement; AMaster: IwbElement; APath: string);
 var
   x : IInterface;
   y : IInterface;
 begin
-  x := ElementByPath(e, asPath);
-  y := ElementByPath(m, asPath);
+  x := ElementByPath(AElement, APath);
+  y := ElementByPath(AMaster, APath);
 
   Evaluate(x, y);
 end;
 
 
-procedure EvaluateByPathAdd(e: IInterface; m: IInterface; asPath: string);
+procedure EvaluateByPathAdd(AElement: IwbElement; AMaster: IwbElement; APath: string);
 var
   x : IInterface;
   y : IInterface;
 begin
-  x := ElementByPath(e, asPath);
-  y := ElementByPath(m, asPath);
+  x := ElementByPath(AElement, APath);
+  y := ElementByPath(AMaster, APath);
 
   EvaluateAdd(x, y);
 end;
 
 
-procedure EvaluateByPathChange(e: IInterface; m: IInterface; asPath: string);
+procedure EvaluateByPathChange(AElement: IwbElement; AMaster: IwbElement; APath: string);
 var
   x : IInterface;
   y : IInterface;
 begin
-  x := ElementByPath(e, asPath);
-  y := ElementByPath(m, asPath);
+  x := ElementByPath(AElement, APath);
+  y := ElementByPath(AMaster, APath);
 
   EvaluateChange(x, y);
 end;
 
 
-procedure EvaluateByPathRemove(e: IInterface; m: IInterface; asPath: string);
+procedure EvaluateByPathRemove(AElement: IwbElement; AMaster: IwbElement; APath: string);
 var
   x : IInterface;
   y : IInterface;
 begin
-  x := ElementByPath(e, asPath);
-  y := ElementByPath(m, asPath);
+  x := ElementByPath(AElement, APath);
+  y := ElementByPath(AMaster, APath);
 
   EvaluateRemove(x, y);
 end;
 
 
-procedure ProcessTag(asTag: string; e: IInterface; m: IInterface);
+procedure ProcessTag(ATag: string; e: IInterface; m: IInterface);
 var
   x          : IInterface;
   y          : IInterface;
@@ -1238,7 +1183,7 @@ var
   k          : IInterface;
   sSignature : string;
 begin
-  g_sTag := asTag;
+  g_sTag := ATag;
 
   if TagExists(g_sTag) then
     Exit;
@@ -2113,90 +2058,100 @@ begin
 end;
 
 
-procedure ProcessDelevRelevTags(e: IInterface; m: IInterface);
+procedure ProcessDelevRelevTags(ARecord: IwbMainRecord; AMaster: IwbMainRecord);
 var
-  kEntries       : IInterface;
-  kEntriesMaster : IInterface;
-  kEntry         : IInterface;
-  kEntryMaster   : IInterface;
-  kCOED          : IInterface; // extra data
-  kCOEDMaster    : IInterface; // extra data
-  sSignature     : string;
-  sSortKey       : string;
-  sSortKeyMaster : string;
-  i              : integer;
-  j              : integer;
+  kEntries          : IwbElement;
+  kEntriesMaster    : IwbElement;
+  kEntry            : IwbElement;
+  kEntryMaster      : IwbElement;
+  kCOED             : IwbElement; // extra data
+  kCOEDMaster       : IwbElement; // extra data
+  sSignature        : string;
+  sEditValues       : string;
+  sMasterEditValues : string;
+  i                 : integer;
+  j                 : integer;
 begin
   // nothing to do if already tagged
   if TagExists('Delev') and TagExists('Relev') then
     Exit;
 
   // get Leveled List Entries
-  kEntries := ElementByName(e, 'Leveled List Entries');
-  kEntriesMaster := ElementByName(m, 'Leveled List Entries');
+  kEntries       := ElementByName(ARecord, 'Leveled List Entries');
+  kEntriesMaster := ElementByName(AMaster, 'Leveled List Entries');
 
-  if not Assigned(kEntries)
-  or not Assigned(kEntriesMaster) then
+  if not Assigned(kEntries) then
+    Exit;
+
+  if not Assigned(kEntriesMaster) then
     Exit;
 
   // initalize count matched on reference entries
   j := 0;
 
-  // iterate through all entries
-  g_sTag := 'Relev';
-  for i := 0 to Pred(ElementCount(kEntries)) do
+  if not TagExists('Relev') then
   begin
-    kEntry := ElementByIndex(kEntries, i);
-    kEntryMaster := SortedArrayElementByValue(kEntriesMaster, 'LVLO\Reference', GetElementEditValues(kEntry, 'LVLO\Reference'));
+    g_sTag := 'Relev';
 
-    if not Assigned(kEntryMaster) then
-      Continue;
-
-    Inc(j);
-
-    if TagExists(g_sTag) then
-      Continue;
-
-    if CompareNativeValues(kEntry, kEntryMaster, 'LVLO\Level')
-    or CompareNativeValues(kEntry, kEntryMaster, 'LVLO\Count') then
-      Exit;
-
-    if wbIsOblivion then
-      Continue;
-
-    // Relev check for changed level, count, extra data
-    kCOED := ElementBySignature(kEntry, 'COED');
-    kCOEDMaster := ElementBySignature(kEntryMaster, 'COED');
-
-    sSortKey := SortKeyEx(kCOED);
-    sSortKeyMaster := SortKeyEx(kCOEDMaster);
-
-    if not SameText(sSortKey, sSortKeyMaster) then
+    for i := 0 to Pred(ElementCount(kEntries)) do
     begin
-      AddLogEntry('Assigned', sSortKey, sSortKeyMaster);
-      slSuggestedTags.Add(g_sTag);
-      Exit;
+      kEntry := ElementByIndex(kEntries, i);
+      kEntryMaster := SortedArrayElementByValue(kEntriesMaster, 'LVLO\Reference', GetElementEditValues(kEntry, 'LVLO\Reference'));
+
+      if not Assigned(kEntryMaster) then
+        Continue;
+
+      Inc(j);
+
+      if TagExists(g_sTag) then
+        Continue;
+
+      if CompareNativeValues(kEntry, kEntryMaster, 'LVLO\Level') then
+        Exit;
+
+      if CompareNativeValues(kEntry, kEntryMaster, 'LVLO\Count') then
+        Exit;
+
+      if wbIsOblivion then
+        Continue;
+
+      // Relev check for changed level, count, extra data
+      kCOED       := ElementBySignature(kEntry, 'COED');
+      kCOEDMaster := ElementBySignature(kEntryMaster, 'COED');
+
+      sEditValues       := EditValues(kCOED);
+      sMasterEditValues := EditValues(kCOEDMaster);
+
+      if not SameText(sEditValues, sMasterEditValues) then
+      begin
+        AddLogEntry('Assigned', sEditValues, sMasterEditValues);
+        slSuggestedTags.Add(g_sTag);
+        Exit;
+      end;
     end;
   end;
 
-  sSignature := Signature(e);
+  if not TagExists('Delev') then
+  begin
+    g_sTag := 'Delev';
 
-  // if number of matched entries less than in master list
-  g_sTag := 'Delev';
+    sSignature := Signature(e);
 
-  if (((sSignature = 'LVLC') and (wbIsOblivion or wbIsFallout3 or wbIsFalloutNV))
-  or (sSignature = 'LVLI') or ((sSignature = 'LVLN') and not wbIsOblivion)
-  or ((sSignature = 'LVSP') and (wbIsOblivion or wbIsSkyrim)))
-  and not TagExists(g_sTag) then
-    if j < ElementCount(kEntriesMaster) then
-    begin
-      AddLogEntry('ElementCount', kEntries, kEntriesMaster);
-      slSuggestedTags.Add(g_sTag);
-      Exit;
-    end;
+    if (((sSignature = 'LVLC') and (wbIsOblivion or wbIsFallout3 or wbIsFalloutNV))
+    or (sSignature = 'LVLI') or ((sSignature = 'LVLN') and not wbIsOblivion)
+    or ((sSignature = 'LVSP') and (wbIsOblivion or wbIsSkyrim)))
+    and not TagExists(g_sTag) then
+      // if number of matched entries less than in master list
+      if j < ElementCount(kEntriesMaster) then
+      begin
+        AddLogEntry('ElementCount', kEntries, kEntriesMaster);
+        slSuggestedTags.Add(g_sTag);
+        Exit;
+      end;
+  end;
 end;
 
-function AddLogEntry(asTestName: string; e: IInterface; m: IInterface): string;
+function AddLogEntry(ATestName: string; AElement: IwbElement; AMaster: IwbElement): string;
 var
   mr    : IwbMainRecord;
   sName : string;
@@ -2205,25 +2160,25 @@ begin
   if optionOutputLog = mrNo then
     Exit;
 
-  if Assigned(m) then
+  if Assigned(AMaster) then
   begin
-    mr := ContainingMainRecord(m);
-    sPath := Path(m);
+    mr    := ContainingMainRecord(AMaster);
+    sPath := Path(AMaster);
   end else
   begin
-    mr := ContainingMainRecord(e);
-    sPath := Path(e);
+    mr    := ContainingMainRecord(AElement);
+    sPath := Path(AElement);
   end;
 
   sPath := RightStr(sPath, Length(sPath) - 5);
 
   sName := Format('[%s:%s]', [Signature(mr), IntToHex(GetLoadOrderFormID(mr), 8)]);
 
-  slLog.Add(Format('{%s} (%s) %s %s', [g_sTag, asTestName, sName, sPath]));
+  slLog.Add(Format('{%s} (%s) %s %s', [g_sTag, ATestName, sName, sPath]));
 end;
 
 
-function FileByName(asFileName: string): IwbFile;
+function FileByName(AFileName: string): IwbFile;
 var
   kFile : IwbFile;
   i     : integer;
@@ -2233,7 +2188,7 @@ begin
   for i := 0 to Pred(FileCount) do
   begin
     kFile := FileByIndex(i);
-    if asFileName = GetFileName(kFile) then
+    if SameText(AFileName, GetFileName(kFile)) then
     begin
       Result := kFile;
       Exit;
@@ -2251,19 +2206,13 @@ end;
 
 procedure chkAddTagsClick(Sender: TObject);
 begin
-  if optionAddTags = mrYes then
-    optionAddTags := mrNo
-  else
-    optionAddTags := mrYes;
+  optionAddTags := IfThen(optionOutputLog = mrYes, mrNo, mrYes);
 end;
 
 
 procedure chkLoggingClick(Sender: TObject);
 begin
-  if optionOutputLog = mrYes then
-    optionOutputLog := mrNo
-  else
-    optionOutputLog := mrYes;
+  optionOutputLog := IfThen(optionOutputLog = mrYes, mrNo, mrYes);
 end;
 
 
