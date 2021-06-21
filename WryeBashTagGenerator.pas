@@ -8,25 +8,25 @@ unit WryeBashTagGenerator;
 
 
 const
-  scaleFactor = Screen.PixelsPerInch / 96;
+  ScriptName    = 'WryeBashTagGenerator';
+  ScriptVersion = '1.6.4.4';
+  ScriptAuthor  = 'fireundubh';
+  ScriptEmail   = 'fireundubh@gmail.com';
+  ScaleFactor   = Screen.PixelsPerInch / 96;
 
 
 var
-  kFile            : IwbFile;
   slBadTags        : TStringList;
   slDifferentTags  : TStringList;
   slExistingTags   : TStringList;
   slLog            : TStringList;
   slSuggestedTags  : TStringList;
   slDeprecatedTags : TStringList;
-  g_sTag           : string;
-  sFileName        : string;
-  sScriptName      : string;
-  sScriptVersion   : string;
-  sScriptAuthor    : string;
-  sScriptEmail     : string;
-  optionAddTags    : integer;
-  optionOutputLog  : integer;
+  slMasterPlugins  : TStringList;
+  g_FileName       : string;
+  g_Tag            : string;
+  g_AddTags        : integer;
+  g_LogTests       : integer;
 
 
 function wbIsOblivion: boolean;
@@ -102,61 +102,51 @@ end;
 
 
 function Initialize: integer;
-var
-  kDescription : IwbElement;
-  kHeader      : IwbElement;
-  sBashTags    : string;
-  sDescription : string;
-  sMasterName  : string;
-  r            : IwbMainRecord;
-  i            : integer;
 begin
-  sScriptName    := 'WryeBashTagGenerator';
-  sScriptVersion := '1.6.4.3';
-  sScriptAuthor  := 'fireundubh';
-  sScriptEmail   := 'fireundubh@gmail.com';
-
-  // clear
   ClearMessages();
 
-  // show script header
-  AddMessage(#10);
-  LogInfo(sScriptName + ' v' + sScriptVersion + ' by ' + sScriptAuthor + ' <' + sScriptEmail + '>');
-  AddMessage(#10);
+  LogInfo('--------------------------------------------------------------------------------');
+  LogInfo(ScriptName + ' v' + ScriptVersion + ' by ' + ScriptAuthor + ' <' + ScriptEmail + '>');
+  LogInfo('--------------------------------------------------------------------------------');
 
-  optionAddTags   := mrNo;
-  optionOutputLog := mrYes;
+  g_AddTags  := mrNo;
+  g_LogTests := mrYes;
 
-  kFile := Configure(sScriptName + ' v' + sScriptVersion);
-  if not Assigned(kFile) then
-    Exit;
-
-  sFileName := GetFileName(kFile);
-
-  // create list of log entries
   slLog := TStringList.Create;
-  slLog.Sorted := False;
+  slLog.Sorted     := False;
   slLog.Duplicates := dupAccept;
 
-  // create list of tags
-  slSuggestedTags  := TStringList.Create;
-  slSuggestedTags.Sorted := True;
+  slSuggestedTags := TStringList.Create;
+  slSuggestedTags.Sorted     := True;
   slSuggestedTags.Duplicates := dupIgnore;
-  slSuggestedTags.Delimiter := ',';  // separated by comma
+  slSuggestedTags.Delimiter  := ',';
 
-  slExistingTags   := TStringList.Create;  // existing tags
+  slExistingTags := TStringList.Create;
 
-  slDifferentTags  := TStringList.Create;  // different tags
-  slDifferentTags.Sorted := True;
+  slDifferentTags := TStringList.Create;
+  slDifferentTags.Sorted     := True;
   slDifferentTags.Duplicates := dupIgnore;
 
-  slBadTags        := TStringList.Create;  // bad tags
-  slDeprecatedTags := TStringList.Create;  // deprecated tags
+  slBadTags := TStringList.Create;
+
+  slDeprecatedTags := TStringList.Create;
   slDeprecatedTags.CommaText := 'Body-F,Body-M,Body-Size-F,Body-Size-M,C.GridFlags,Derel,Eyes,Eyes-D,Eyes-E,Eyes-R,Hair,Invent,InventOnly,Merge,Npc.EyesOnly,Npc.HairOnly,NpcFaces,R.Relations,Relations,ScriptContents';
+
+  slMasterPlugins := TStringList.Create;
+  slMasterPlugins.Duplicates := dupIgnore;
+  slMasterPlugins.Sorted     := True;
+
+  if ShowPrompt(ScriptName + ' v' + ScriptVersion) = mrAbort then
+  begin
+    LogError('Cannot proceed because user aborted execution');
+    Result := 1;
+    Exit;
+  end;
 
   if wbIsFallout76 then
   begin
-    LogError('Fallout 76 is not supported by CBash.');
+    LogError('Cannot proceed because CBash does not support Fallout 76');
+    Result := 2;
     Exit;
   end;
 
@@ -168,94 +158,87 @@ begin
     LogInfo('Using game mode: Fallout 4')
   else if wbIsOblivion then
     LogInfo('Using game mode: Oblivion')
-  else if wbIsSkyrim and not wbIsSkyrimSE then
-    LogInfo('Using game mode: Skyrim')
-  else if wbIsSkyrimSE then
-    LogInfo('Using game mode: Skyrim Special Edition')
   else if wbIsEnderal then
     LogInfo('Using game mode: Enderal')
   else if wbIsEnderalSE then
     LogInfo('Using game mode: Enderal Special Edition')
+  else if wbIsSkyrimSE then
+    LogInfo('Using game mode: Skyrim Special Edition')
+  else if wbIsSkyrim then
+    LogInfo('Using game mode: Skyrim')
   else
   begin
-    LogError('Cannot identify game mode');
+    LogError('Cannot proceed because script does not support game mode');
+    Result := 3;
     Exit;
   end;
+
+  ProcessFile(FileByIndex(Pred(FileCount)));
+end;
+
+
+function ProcessFile(f: IwbFile): integer;
+var
+  kDescription : IwbElement;
+  kHeader      : IwbElement;
+  sBashTags    : string;
+  sDescription : string;
+  sMasterName  : string;
+  r            : IwbMainRecord;
+  i            : integer;
+begin
+  g_FileName := GetFileName(f);
 
   AddMessage(#10);
 
   LogInfo('Processing... Please wait. This could take a while.');
 
-  for i := 0 to Pred(RecordCount(kFile)) do
-    ProcessRecord(RecordByIndex(kFile, i));
+  for i := 0 to Pred(RecordCount(f)) do
+    ProcessRecord(RecordByIndex(f, i));
 
-  AddMessage(#10);
+  slMasterPlugins.Clear;
 
-  // exit conditions
-  if not Assigned(sFileName) then
-    Exit;
+  LogInfo('--------------------------------------------------------------------------------');
+  LogInfo(g_FileName);
+  LogInfo('-------------------------------------------------------------------------- TESTS');
 
-  // output file name
-  LogInfo(Uppercase(sFileName));
-
-  AddMessage(#10);
-
-  // output log
-  if optionOutputLog = mrYes then
+  if g_LogTests = mrYes then
     for i := 0 to Pred(slLog.Count) do
       LogInfo(slLog[i]);
 
-  if (optionOutputLog = mrYes) and (slLog.Count > 0) then
-    AddMessage(#10);
+  LogInfo('------------------------------------------------------------------------ RESULTS');
 
-  // if any suggested tags were generated
   if slSuggestedTags.Count > 0 then
   begin
-    kHeader := ElementBySignature(kFile, 'TES4');
+    kHeader      := ElementBySignature(f, 'TES4');
+    kDescription := ElementBySignature(kHeader, 'SNAM');
+    sDescription := GetEditValue(kDescription);
 
-    // determine if the header record exists
-    if Assigned(kHeader) then
+    sBashTags := RegExMatch('{{BASH:.*?}}', sDescription);
+    if sBashTags <> '' then
     begin
-      kDescription := ElementBySignature(kHeader, 'SNAM');
-      sDescription := GetEditValue(kDescription);
+      sBashTags := Trim(MidStr(sBashTags, 8, Length(sBashTags) - 9));
+      slExistingTags.CommaText := sBashTags;
+    end else
+      slExistingTags.CommaText := '';
 
-      // categorize tag list
-      sBashTags := RegExMatch('{{BASH:.*?}}', sDescription);
-      if Length(sBashTags) > 0 then
-      begin
-        sBashTags := Trim(MidStr(sBashTags, 8, Length(sBashTags) - 9));
-        slExistingTags.CommaText := sBashTags;
-      end else
-        slExistingTags.CommaText := '';
+    StringListIntersection(slExistingTags, slDeprecatedTags, slBadTags);
+    LogInfo(FormatTags(slBadTags, 'deprecated tag found:', 'deprecated tags found:', 'No deprecated tags found.'));
+    slBadTags.Clear;
 
-      if optionAddTags = mrNo then
-      begin
-        StringListIntersection(slExistingTags, slDeprecatedTags, slBadTags);
-        LogInfo(FormatTags(slBadTags, 'deprecated tag found:', 'deprecated tags found:', 'No deprecated tags found.'));
-        slBadTags.Clear;
-      end;
+    StringListDifference(slSuggestedTags, slExistingTags, slDifferentTags);
+    StringListDifference(slExistingTags, slSuggestedTags, slBadTags);
+    slSuggestedTags.AddStrings(slDifferentTags);
 
-      StringListDifference(slSuggestedTags, slExistingTags, slDifferentTags);
-      StringListDifference(slExistingTags, slSuggestedTags, slBadTags);
-      slSuggestedTags.AddStrings(slDifferentTags);
-
-      // exit if existing and suggested tags are the same
-      if SameText(slExistingTags.CommaText, slSuggestedTags.CommaText) then
-      begin
-        LogInfo(FormatTags(slExistingTags, 'existing tag found:', 'existing tags found:', 'No existing tags found.'));
-        LogInfo(FormatTags(slSuggestedTags, 'suggested tag:', 'suggested tags:', 'No suggested tags.'));
-        LogWarn('No tags to add.' + #13#10);
-        Exit;
-      end;
-
-    // exit if the header record doesn't exist
-    end else begin
-      LogError('Header record not found. Nothing to do. Exiting.' + #13#10);
+    if SameText(slExistingTags.CommaText, slSuggestedTags.CommaText) then
+    begin
+      LogInfo(FormatTags(slExistingTags, 'existing tag found:', 'existing tags found:', 'No existing tags found.'));
+      LogInfo(FormatTags(slSuggestedTags, 'suggested tag:', 'suggested tags:', 'No suggested tags.'));
+      LogWarn('No tags to add.' + #13#10);
       Exit;
     end;
 
-    // write tags
-    if optionAddTags = mrYes then
+    if g_AddTags = mrYes then
     begin
       // if the description element doesn't exist, add the element
       kDescription := ElementBySignature(kHeader, 'SNAM');
@@ -270,10 +253,8 @@ begin
 
       LogInfo(FormatTags(slBadTags,       'bad tag removed:',          'bad tags removed:',          'No bad tags found.'));
       LogInfo(FormatTags(slDifferentTags, 'tag added to file header:', 'tags added to file header:', 'No tags added.'));
-    end;
-
-    // suggest tags only and output to log
-    if optionAddTags = mrNo then
+    end
+    else
     begin
       LogInfo(FormatTags(slExistingTags,  'existing tag found:',    'existing tags found:',    'No existing tags found.'));
       LogInfo(FormatTags(slBadTags,       'bad tag found:',         'bad tags found:',         'No bad tags found.'));
@@ -282,6 +263,12 @@ begin
     end;
   end else
     LogInfo('No tags are suggested for this plugin.');
+
+  slLog.Clear;
+  slSuggestedTags.Clear;
+  slExistingTags.Clear;
+  slDifferentTags.Clear;
+  slBadTags.Clear;
 
   AddMessage(#10);
 end;
@@ -294,11 +281,7 @@ var
   ConflictState : TConflictThis;
   iFormID       : integer;
 begin
-  // exit conditions
   ConflictState := ConflictAllForMainRecord(e);
-
-  // get record signature
-  sSignature := Signature(e);
 
   if (ConflictState = caUnknown)
   or (ConflictState = caOnlyOne)
@@ -306,7 +289,7 @@ begin
     Exit;
 
   // exit if the record should not be processed
-  if CompareText(sFileName, 'Dawnguard.esm') = 0 then
+  if SameText(g_FileName, 'Dawnguard.esm') then
   begin
     iFormID := FileFormID(e);
     if (iFormID = $00016BCF)
@@ -333,6 +316,8 @@ begin
   if GetIsDeleted(e)
   or GetIsDeleted(o) then
     Exit;
+
+  sSignature := Signature(e);
 
   // -------------------------------------------------------------------------------
   // GROUP: Supported tags exclusive to FNV
@@ -398,7 +383,7 @@ begin
       ProcessTag('Actors.Perks.Remove', e, o);
       ProcessTag('Factions', e, o);
 
-      g_sTag := 'NPC.AIPackageOverrides';
+      g_Tag := 'NPC.AIPackageOverrides';
       if not CompareFlags(e, o, 'ACBS\Template Flags', 'Use AI Packages', False, False) then
         ProcessTag('NPC.AIPackageOverrides', e, o);
 
@@ -422,7 +407,7 @@ begin
     if sSignature = 'FLST' then
       ProcessTag('Deflst', e, o);
 
-    g_sTag := 'Destructible';
+    g_Tag := 'Destructible';
     if ContainsStr(sSignature, 'ACTI ALCH AMMO BOOK CONT DOOR FURN IMOD KEYM MISC MSTT PROJ TACT TERM WEAP') then
       ProcessTag('Destructible', e, o)
 
@@ -450,7 +435,7 @@ begin
       if sSignature = 'CREA' then
         ProcessTag('Creatures.Type', e, o);
 
-      g_sTag := 'Factions';
+      g_Tag := 'Factions';
       if wbIsOblivion or not CompareFlags(e, o, 'ACBS\Template Flags', 'Use Factions', False, False) then
         ProcessTag('Factions', e, o);
 
@@ -483,15 +468,15 @@ begin
   begin
     if ContainsStr(sSignature, 'CREA NPC_') then
     begin
-      g_sTag := 'Actors.ACBS';
+      g_Tag := 'Actors.ACBS';
       if not CompareFlags(e, o, 'ACBS\Template Flags', 'Use Stats', False, False) then
         ProcessTag('Actors.ACBS', e, o);
 
-      g_sTag := 'Actors.AIData';
+      g_Tag := 'Actors.AIData';
       if not CompareFlags(e, o, 'ACBS\Template Flags', 'Use AI Data', False, False) then
         ProcessTag('Actors.AIData', e, o);
 
-      g_sTag := 'Actors.AIPackages';
+      g_Tag := 'Actors.AIPackages';
       if not CompareFlags(e, o, 'ACBS\Template Flags', 'Use AI Packages', False, False) then
         ProcessTag('Actors.AIPackages', e, o);
 
@@ -505,11 +490,11 @@ begin
         ProcessTag('Actors.DeathItem', e, o);
       end;
 
-      g_sTag := 'Actors.Skeleton';
+      g_Tag := 'Actors.Skeleton';
       if not CompareFlags(e, o, 'ACBS\Template Flags', 'Use Model/Animation', False, False) then
         ProcessTag('Actors.Skeleton', e, o);
 
-      g_sTag := 'Actors.Stats';
+      g_Tag := 'Actors.Stats';
       if not CompareFlags(e, o, 'ACBS\Template Flags', 'Use Stats', False, False) then
         ProcessTag('Actors.Stats', e, o);
 
@@ -518,18 +503,18 @@ begin
 
       if sSignature = 'NPC_' then
       begin
-        g_sTag := 'NPC.Class';
+        g_Tag := 'NPC.Class';
         if not CompareFlags(e, o, 'ACBS\Template Flags', 'Use Traits', False, False) then
           ProcessTag('NPC.Class', e, o);
 
-        g_sTag := 'NPC.Race';
+        g_Tag := 'NPC.Race';
         if not CompareFlags(e, o, 'ACBS\Template Flags', 'Use Traits', False, False) then
           ProcessTag('NPC.Race', e, o);
       end;
 
-      g_sTag := 'Scripts';
+      g_Tag := 'Scripts';
       if not CompareFlags(e, o, 'ACBS\Template Flags', 'Use Script', False, False) then
-        ProcessTag(g_sTag, e, o);
+        ProcessTag(g_Tag, e, o);
     end;
 
     if sSignature = 'CELL' then
@@ -641,80 +626,76 @@ begin
 
       if not wbIsOblivion then
       begin
-        g_sTag := 'Invent.Add';
+        g_Tag := 'Invent.Add';
         if not CompareFlags(e, o, 'ACBS\Template Flags', 'Use Inventory', False, False) then
-          ProcessTag(g_sTag, e, o);
+          ProcessTag(g_Tag, e, o);
 
-        g_sTag := 'Invent.Change';
+        g_Tag := 'Invent.Change';
         if not CompareFlags(e, o, 'ACBS\Template Flags', 'Use Inventory', False, False) then
-          ProcessTag(g_sTag, e, o);
+          ProcessTag(g_Tag, e, o);
 
-        g_sTag := 'Invent.Remove';
+        g_Tag := 'Invent.Remove';
         if not CompareFlags(e, o, 'ACBS\Template Flags', 'Use Inventory', False, False) then
-          ProcessTag(g_sTag, e, o);
+          ProcessTag(g_Tag, e, o);
 
         // special handling for CREA and NPC_ record types
-        g_sTag := 'Names';
+        g_Tag := 'Names';
         if not CompareFlags(e, o, 'ACBS\Template Flags', 'Use Base Data', False, False) then
-          ProcessTag(g_sTag, e, o);
+          ProcessTag(g_Tag, e, o);
 
         // special handling for CREA record type
-        g_sTag := 'Sound';
+        g_Tag := 'Sound';
         if sSignature = 'CREA' then
           if not CompareFlags(e, o, 'ACBS\Template Flags', 'Use Model/Animation', False, False) then
-            ProcessTag(g_sTag, e, o);
+            ProcessTag(g_Tag, e, o);
       end;
     end;
   end;
 
   // ObjectBounds
-  g_sTag := 'ObjectBounds';
+  g_Tag := 'ObjectBounds';
 
   if wbIsFallout3 and ContainsStr(sSignature, 'ACTI ADDN ALCH AMMO ARMA ARMO ASPC BOOK COBJ CONT CREA DOOR EXPL FURN GRAS IDLM INGR KEYM LIGH LVLC LVLI LVLN MISC MSTT NOTE NPC_ PROJ PWAT SCOL SOUN STAT TACT TERM TREE TXST WEAP') then
-    ProcessTag(g_sTag, e, o);
+    ProcessTag(g_Tag, e, o);
 
   if wbIsFalloutNV and ContainsStr(sSignature, 'ACTI ADDN ALCH AMMO ARMA ARMO ASPC BOOK CCRD CHIP CMNY COBJ CONT CREA DOOR EXPL FURN GRAS IDLM IMOD INGR KEYM LIGH LVLC LVLI LVLN MISC MSTT NOTE NPC_ PROJ PWAT SCOL SOUN STAT TACT TERM TREE TXST WEAP') then
-    ProcessTag(g_sTag, e, o);
+    ProcessTag(g_Tag, e, o);
 
   if wbIsSkyrim and ContainsStr(sSignature, 'ACTI ADDN ALCH AMMO APPA ARMO ARTO ASPC BOOK CONT DOOR DUAL ENCH EXPL FLOR FURN GRAS HAZD IDLM INGR KEYM LIGH LVLI LVLN LVSP MISC MSTT NPC_ PROJ SCRL SLGM SOUN SPEL STAT TACT TREE TXST WEAP') then
-    ProcessTag(g_sTag, e, o);
+    ProcessTag(g_Tag, e, o);
 
   if wbIsFallout4 and ContainsStr(sSignature, 'LVLI LVLN') then
-    ProcessTag(g_sTag, e, o);
+    ProcessTag(g_Tag, e, o);
 
   // Text
   if not wbIsFallout4 then
   begin
-    g_sTag := 'Text';
+    g_Tag := 'Text';
 
     if wbIsOblivion and ContainsStr(sSignature, 'BOOK BSGN CLAS LSCR MGEF SKIL') then
-      ProcessTag(g_sTag, e, o);
+      ProcessTag(g_Tag, e, o);
 
     if wbIsFallout3 and ContainsStr(sSignature, 'AVIF BOOK CLAS LSCR MESG MGEF NOTE PERK TERM') then
-      ProcessTag(g_sTag, e, o);
+      ProcessTag(g_Tag, e, o);
 
     if wbIsFalloutNV and ContainsStr(sSignature, 'AVIF BOOK CHAL CLAS IMOD LSCR MESG MGEF NOTE PERK TERM') then
-      ProcessTag(g_sTag, e, o);
+      ProcessTag(g_Tag, e, o);
 
     if wbIsSkyrim and ContainsStr(sSignature, 'ALCH AMMO APPA ARMO AVIF BOOK CLAS LSCR MESG MGEF SCRL SHOU SPEL WEAP') then
-      ProcessTag(g_sTag, e, o);
+      ProcessTag(g_Tag, e, o);
   end;
 end;
 
+
 function Finalize: integer;
 begin
-  if not Assigned(kFile) then
-  begin
-    LogInfo('Script execution was aborted.' + #13#10);
-    Exit;
-  end;
-
   slLog.Free;
   slSuggestedTags.Free;
   slExistingTags.Free;
   slDifferentTags.Free;
   slBadTags.Free;
   slDeprecatedTags.Free;
+  slMasterPlugins.Free;
 end;
 
 
@@ -731,7 +712,7 @@ function RegExMatch(AExpr: string; ASubj: string): string;
 var
   re     : TPerlRegEx;
 begin
-  Result := ASubj;
+  Result := '';
   re := TPerlRegEx.Create;
   try
     re.RegEx := AExpr;
@@ -750,7 +731,7 @@ var
   re      : TPerlRegEx;
   sResult : string;
 begin
-  Result := ASubj;
+  Result := '';
   re := TPerlRegEx.Create;
   try
     re.RegEx := AExpr;
@@ -794,7 +775,7 @@ function CompareAssignment(AElement: IwbElement; AMaster: IwbElement): boolean;
 begin
   Result := False;
 
-  if TagExists(g_sTag) then
+  if TagExists(g_Tag) then
     Exit;
 
   if not Assigned(AElement) and not Assigned(AMaster) then
@@ -803,12 +784,10 @@ begin
   if Assigned(AElement) and Assigned(AMaster) then
     Exit;
 
-  if Assigned(AElement) <> Assigned(AMaster) then
-  begin
-    AddLogEntry('Assigned', AElement, AMaster);
-    slSuggestedTags.Add(g_sTag);
-    Result := True;
-  end;
+  AddLogEntry('Assigned', AElement, AMaster);
+  slSuggestedTags.Add(g_Tag);
+
+  Result := True;
 end;
 
 
@@ -816,14 +795,14 @@ function CompareElementCount(AElement: IwbElement; AMaster: IwbElement): boolean
 begin
   Result := False;
 
-  if TagExists(g_sTag) then
+  if TagExists(g_Tag) then
     Exit;
 
   if ElementCount(AElement) = ElementCount(AMaster) then
     Exit;
 
   AddLogEntry('ElementCount', AElement, AMaster);
-  slSuggestedTags.Add(g_sTag);
+  slSuggestedTags.Add(g_Tag);
 
   Result := True;
 end;
@@ -833,14 +812,14 @@ function CompareElementCountAdd(AElement: IwbElement; AMaster: IwbElement): bool
 begin
   Result := False;
 
-  if TagExists(g_sTag) then
+  if TagExists(g_Tag) then
     Exit;
 
   if ElementCount(AElement) <= ElementCount(AMaster) then
     Exit;
 
   AddLogEntry('ElementCountAdd', AElement, AMaster);
-  slSuggestedTags.Add(g_sTag);
+  slSuggestedTags.Add(g_Tag);
 
   Result := True;
 end;
@@ -850,14 +829,14 @@ function CompareElementCountRemove(AElement: IwbElement; AMaster: IwbElement): b
 begin
   Result := False;
 
-  if TagExists(g_sTag) then
+  if TagExists(g_Tag) then
     Exit;
 
   if ElementCount(AElement) >= ElementCount(AMaster) then
     Exit;
 
   AddLogEntry('ElementCountRemove', AElement, AMaster);
-  slSuggestedTags.Add(g_sTag);
+  slSuggestedTags.Add(g_Tag);
 
   Result := True;
 end;
@@ -867,14 +846,14 @@ function CompareEditValue(AElement: IwbElement; AMaster: IwbElement): boolean;
 begin
   Result := False;
 
-  if TagExists(g_sTag) then
+  if TagExists(g_Tag) then
     Exit;
 
   if SameText(GetEditValue(AElement), GetEditValue(AMaster)) then
     Exit;
 
   AddLogEntry('GetEditValue', AElement, AMaster);
-  slSuggestedTags.Add(g_sTag);
+  slSuggestedTags.Add(g_Tag);
 
   Result := True;
 end;
@@ -893,7 +872,7 @@ var
 begin
   Result := False;
 
-  if TagExists(g_sTag) then
+  if TagExists(g_Tag) then
     Exit;
 
   // flags arrays
@@ -917,7 +896,7 @@ begin
   begin
     sTestName := IfThen(ANotOperator, 'CompareFlags:NOT', 'CompareFlags:OR');
     AddLogEntry(sTestName, x, y);
-    slSuggestedTags.Add(g_sTag);
+    slSuggestedTags.Add(g_Tag);
   end;
 end;
 
@@ -930,7 +909,7 @@ var
 begin
   Result := False;
 
-  if TagExists(g_sTag) then
+  if TagExists(g_Tag) then
     Exit;
 
   ConflictState := ConflictAllForMainRecord(ContainingMainRecord(AElement));
@@ -950,7 +929,7 @@ begin
     Exit;
 
   AddLogEntry('CompareKeys', AElement, AMaster);
-  slSuggestedTags.Add(g_sTag);
+  slSuggestedTags.Add(g_Tag);
 
   Result := True;
 end;
@@ -963,7 +942,7 @@ var
 begin
   Result := False;
 
-  if TagExists(g_sTag) then
+  if TagExists(g_Tag) then
     Exit;
 
   x := ElementByPath(AElement, APath);
@@ -973,7 +952,7 @@ begin
     Exit;
 
   AddLogEntry('CompareNativeValues', AElement, AMaster);
-  slSuggestedTags.Add(g_sTag);
+  slSuggestedTags.Add(g_Tag);
 
   Result := True;
 end;
@@ -1058,7 +1037,7 @@ end;
 procedure Evaluate(AElement: IwbElement; AMaster: IwbElement);
 begin
   // exit if the tag already exists
-  if TagExists(g_sTag) then
+  if TagExists(g_Tag) then
     Exit;
 
   // Suggest tag if one element exists while the other does not
@@ -1085,7 +1064,7 @@ end;
 
 procedure EvaluateAdd(AElement: IwbElement; AMaster: IwbElement);
 begin
-  if TagExists(g_sTag) then
+  if TagExists(g_Tag) then
     Exit;
 
   if not Assigned(AElement) then
@@ -1099,7 +1078,7 @@ end;
 
 procedure EvaluateChange(AElement: IwbElement; AMaster: IwbElement);
 begin
-  if TagExists(g_sTag) then
+  if TagExists(g_Tag) then
     Exit;
 
   if not Assigned(AElement) then
@@ -1113,7 +1092,7 @@ end;
 
 procedure EvaluateRemove(AElement: IwbElement; AMaster: IwbElement);
 begin
-  if TagExists(g_sTag) then
+  if TagExists(g_Tag) then
     Exit;
 
   if not Assigned(AElement) then
@@ -1183,15 +1162,15 @@ var
   k          : IInterface;
   sSignature : string;
 begin
-  g_sTag := ATag;
+  g_Tag := ATag;
 
-  if TagExists(g_sTag) then
+  if TagExists(g_Tag) then
     Exit;
 
   sSignature := Signature(e);
 
   // Bookmark: Actors.ACBS
-  if (g_sTag = 'Actors.ACBS') then
+  if (g_Tag = 'Actors.ACBS') then
   begin
     // assign ACBS elements
     x := ElementBySignature(e, 'ACBS');
@@ -1221,7 +1200,7 @@ begin
   end
 
   // Bookmark: Actors.AIData
-  else if (g_sTag = 'Actors.AIData') then
+  else if (g_Tag = 'Actors.AIData') then
   begin
     // assign AIDT elements
     x := ElementBySignature(e, 'AIDT');
@@ -1241,39 +1220,39 @@ begin
   end
 
   // Bookmark: Actors.AIPackages
-  else if (g_sTag = 'Actors.AIPackages') then
+  else if (g_Tag = 'Actors.AIPackages') then
     EvaluateByPath(e, m, 'Packages')
 
   // Bookmark: Actors.Anims
-  else if (g_sTag = 'Actors.Anims') then
+  else if (g_Tag = 'Actors.Anims') then
     EvaluateByPath(e, m, 'KFFZ')
 
   // Bookmark: Actors.CombatStyle
-  else if (g_sTag = 'Actors.CombatStyle') then
+  else if (g_Tag = 'Actors.CombatStyle') then
     EvaluateByPath(e, m, 'ZNAM')
 
   // Bookmark: Actors.DeathItem
-  else if (g_sTag = 'Actors.DeathItem') then
+  else if (g_Tag = 'Actors.DeathItem') then
     EvaluateByPath(e, m, 'INAM')
 
   // Bookmark: Actors.Perks.Add (TES5, SSE)
-  else if (g_sTag = 'Actors.Perks.Add') then
+  else if (g_Tag = 'Actors.Perks.Add') then
     EvaluateByPathAdd(e, m, 'Perks')
 
   // Bookmark: Actors.Perks.Change (TES5, SSE)
-  else if (g_sTag = 'Actors.Perks.Change') then
+  else if (g_Tag = 'Actors.Perks.Change') then
     EvaluateByPathChange(e, m, 'Perks')
 
   // Bookmark: Actors.Perks.Remove (TES5, SSE)
-  else if (g_sTag = 'Actors.Perks.Remove') then
+  else if (g_Tag = 'Actors.Perks.Remove') then
     EvaluateByPathRemove(e, m, 'Perks')
 
   // Bookmark: Actors.RecordFlags (!FO4)
-  else if (g_sTag = 'Actors.RecordFlags') then
+  else if (g_Tag = 'Actors.RecordFlags') then
     EvaluateByPath(e, m, 'Record Header\Record Flags')
 
   // Bookmark: Actors.Skeleton
-  else if (g_sTag = 'Actors.Skeleton') then
+  else if (g_Tag = 'Actors.Skeleton') then
   begin
     // assign Model elements
     x := ElementByName(e, 'Model');
@@ -1290,11 +1269,11 @@ begin
   end
 
   // Bookmark: Actors.Spells
-  else if (g_sTag = 'Actors.Spells') then
+  else if (g_Tag = 'Actors.Spells') then
     EvaluateByPath(e, m, 'Spells')
 
   // Bookmark: Actors.Stats
-  else if (g_sTag = 'Actors.Stats') then
+  else if (g_Tag = 'Actors.Stats') then
   begin
     // assign DATA elements
     x := ElementBySignature(e, 'DATA');
@@ -1321,15 +1300,15 @@ begin
   end
 
   // Bookmark: Actors.Voice (FO3, FNV, TES5, SSE)
-  else if (g_sTag = 'Actors.Voice') then
+  else if (g_Tag = 'Actors.Voice') then
     EvaluateByPath(e, m, 'VTCK')
 
   // Bookmark: C.Acoustic
-  else if (g_sTag = 'C.Acoustic') then
+  else if (g_Tag = 'C.Acoustic') then
     EvaluateByPath(e, m, 'XCAS')
 
   // Bookmark: C.Climate
-  else if (g_sTag = 'C.Climate') then
+  else if (g_Tag = 'C.Climate') then
   begin
     // add tag if the Behave Like Exterior flag is set ine one record but not the other
     if CompareFlags(e, m, 'DATA', 'Behave Like Exterior', True, True) then
@@ -1340,31 +1319,31 @@ begin
   end
 
   // Bookmark: C.Encounter
-  else if (g_sTag = 'C.Encounter') then
+  else if (g_Tag = 'C.Encounter') then
     EvaluateByPath(e, m, 'XEZN')
 
   // Bookmark: C.ForceHideLand (!TES4, !FO4)
-  else if (g_sTag = 'C.ForceHideLand') then
+  else if (g_Tag = 'C.ForceHideLand') then
     EvaluateByPath(e, m, 'XCLC\Land Flags')
 
   // Bookmark: C.ImageSpace
-  else if (g_sTag = 'C.ImageSpace') then
+  else if (g_Tag = 'C.ImageSpace') then
     EvaluateByPath(e, m, 'XCIM')
 
   // Bookmark: C.Light
-  else if (g_sTag = 'C.Light') then
+  else if (g_Tag = 'C.Light') then
     EvaluateByPath(e, m, 'XCLL')
 
   // Bookmark: C.Location
-  else if (g_sTag = 'C.Location') then
+  else if (g_Tag = 'C.Location') then
     EvaluateByPath(e, m, 'XLCN')
 
   // Bookmark: C.LockList
-  else if (g_sTag = 'C.LockList') then
+  else if (g_Tag = 'C.LockList') then
     EvaluateByPath(e, m, 'XILL')
 
   // Bookmark: C.MiscFlags (!FO4)
-  else if (g_sTag = 'C.MiscFlags') then
+  else if (g_Tag = 'C.MiscFlags') then
   begin
     if CompareFlags(e, m, 'DATA', 'Is Interior Cell', True, True) then
       Exit;
@@ -1385,32 +1364,32 @@ begin
   end
 
   // Bookmark: C.Music
-  else if (g_sTag = 'C.Music') then
+  else if (g_Tag = 'C.Music') then
     EvaluateByPath(e, m, 'XCMO')
 
   // Bookmark: FULL (C.Name, Names, SpellStats)
-  else if ContainsStr(g_sTag, 'C.Name Names SpellStats') then
+  else if ContainsStr(g_Tag, 'C.Name Names SpellStats') then
     EvaluateByPath(e, m, 'FULL')
 
   // Bookmark: C.Owner
-  else if (g_sTag = 'C.Owner') then
+  else if (g_Tag = 'C.Owner') then
     EvaluateByPath(e, m, 'Ownership')
 
   // Bookmark: C.RecordFlags
-  else if (g_sTag = 'C.RecordFlags') then
+  else if (g_Tag = 'C.RecordFlags') then
     EvaluateByPath(e, m, 'Record Header\Record Flags')
 
   // Bookmark: C.Regions
-  else if (g_sTag = 'C.Regions') then
+  else if (g_Tag = 'C.Regions') then
     EvaluateByPath(e, m, 'XCLR')
 
   // Bookmark: C.SkyLighting
   // add tag if the Behave Like Exterior flag is set in one record but not the other
-  else if (g_sTag = 'C.SkyLighting') and CompareFlags(e, m, 'DATA', 'Use Sky Lighting', True, True) then
+  else if (g_Tag = 'C.SkyLighting') and CompareFlags(e, m, 'DATA', 'Use Sky Lighting', True, True) then
     Exit
 
   // Bookmark: C.Water
-  else if (g_sTag = 'C.Water') then
+  else if (g_Tag = 'C.Water') then
   begin
     // add tag if Has Water flag is set in one record but not the other
     if CompareFlags(e, m, 'DATA', 'Has Water', True, True) then
@@ -1426,22 +1405,22 @@ begin
   end
 
   // Bookmark: Creatures.Blood
-  else if (g_sTag = 'Creatures.Blood') then
+  else if (g_Tag = 'Creatures.Blood') then
   begin
     EvaluateByPath(e, m, 'NAM0');
     EvaluateByPath(e, m, 'NAM1');
   end
 
   // Bookmark: Creatures.Type
-  else if (g_sTag = 'Creatures.Type') then
+  else if (g_Tag = 'Creatures.Type') then
     EvaluateByPath(e, m, 'DATA\Type')
 
   // Bookmark: Deflst
-  else if (g_sTag = 'Deflst') then
+  else if (g_Tag = 'Deflst') then
     EvaluateByPathRemove(e, m, 'FormIDs')
 
   // Bookmark: Destructible
-  else if (g_sTag = 'Destructible') then
+  else if (g_Tag = 'Destructible') then
   begin
     // assign Destructable elements
     x := ElementByName(e, 'Destructible');
@@ -1478,7 +1457,7 @@ begin
   end
 
   // Bookmark: EffectStats
-  else if (g_sTag = 'EffectStats') then
+  else if (g_Tag = 'EffectStats') then
   begin
     if wbIsOblivion or wbIsFallout3 or wbIsFalloutNV then
     begin
@@ -1536,7 +1515,7 @@ begin
   end
 
   // Bookmark: EnchantmentStats
-  else if (g_sTag = 'EnchantmentStats') then
+  else if (g_Tag = 'EnchantmentStats') then
   begin
     if wbIsOblivion or wbIsFallout3 or wbIsFalloutNV then
     begin
@@ -1550,7 +1529,7 @@ begin
   end
 
   // Bookmark: Factions
-  else if (g_sTag = 'Factions') then
+  else if (g_Tag = 'Factions') then
   begin
     // assign Factions properties
     x := ElementByName(e, 'Factions');
@@ -1570,7 +1549,7 @@ begin
   end
 
   // Bookmark: Graphics
-  else if (g_sTag = 'Graphics') then
+  else if (g_Tag = 'Graphics') then
   begin
     // evaluate Icon and Model properties
     if ContainsStr(sSignature, 'ALCH AMMO APPA BOOK INGR KEYM LIGH MGEF MISC SGST SLGM TREE WEAP') then
@@ -1736,19 +1715,19 @@ begin
   end
 
   // Bookmark: Invent.Add
-  else if (g_sTag = 'Invent.Add') then
+  else if (g_Tag = 'Invent.Add') then
     EvaluateByPathAdd(e, m, 'Items')
 
   // Bookmark: Invent.Change - TEST
-  else if (g_sTag = 'Invent.Change') then
+  else if (g_Tag = 'Invent.Change') then
     EvaluateByPathChange(e, m, 'Items')
 
   // Bookmark: Invent.Remove
-  else if (g_sTag = 'Invent.Remove') then
+  else if (g_Tag = 'Invent.Remove') then
     EvaluateByPathRemove(e, m, 'Items')
 
   // Bookmark: Keywords
-  else if (g_sTag = 'Keywords') then
+  else if (g_Tag = 'Keywords') then
   begin
     x := ElementBySignature(e, 'KWDA');
     y := ElementBySignature(m, 'KWDA');
@@ -1770,7 +1749,7 @@ begin
   end
 
   // Bookmark: NPC.AIPackageOverrides
-  else if (g_sTag = 'NPC.AIPackageOverrides') then
+  else if (g_Tag = 'NPC.AIPackageOverrides') then
   begin
     if wbIsSkyrim then
     begin
@@ -1782,106 +1761,106 @@ begin
   end
 
   // Bookmark: NPC.AttackRace
-  else if (g_sTag = 'NPC.AttackRace') then
+  else if (g_Tag = 'NPC.AttackRace') then
     EvaluateByPath(e, m, 'ATKR')
 
   // Bookmark: NPC.Class
-  else if (g_sTag = 'NPC.Class') then
+  else if (g_Tag = 'NPC.Class') then
     EvaluateByPath(e, m, 'CNAM')
 
   // Bookmark: NPC.CrimeFaction
-  else if (g_sTag = 'NPC.CrimeFaction') then
+  else if (g_Tag = 'NPC.CrimeFaction') then
     EvaluateByPath(e, m, 'CRIF')
 
   // Bookmark: NPC.DefaultOutfit
-  else if (g_sTag = 'NPC.DefaultOutfit') then
+  else if (g_Tag = 'NPC.DefaultOutfit') then
     EvaluateByPath(e, m, 'DOFT')
 
   // Bookmark: NPC.Eyes
-  else if (g_sTag = 'NPC.Eyes') then
+  else if (g_Tag = 'NPC.Eyes') then
     EvaluateByPath(e, m, 'ENAM')
 
   // Bookmark: NPC.FaceGen
-  else if (g_sTag = 'NPC.FaceGen') then
+  else if (g_Tag = 'NPC.FaceGen') then
     EvaluateByPath(e, m, 'FaceGen Data')
 
   // Bookmark: NPC.Hair
-  else if (g_sTag = 'NPC.Hair') then
+  else if (g_Tag = 'NPC.Hair') then
     EvaluateByPath(e, m, 'HNAM')
 
   // Bookmark: NPC.Race
-  else if (g_sTag = 'NPC.Race') then
+  else if (g_Tag = 'NPC.Race') then
     EvaluateByPath(e, m, 'RNAM')
 
   // Bookmark: ObjectBounds
-  else if (g_sTag = 'ObjectBounds') then
+  else if (g_Tag = 'ObjectBounds') then
     EvaluateByPath(e, m, 'OBND')
 
   // Bookmark: Outfits.Add
-  else if (g_sTag = 'Outfits.Add') then
+  else if (g_Tag = 'Outfits.Add') then
     EvaluateByPathAdd(e, m, 'OTFT')
 
   // Bookmark: Outfits.Remove
-  else if (g_sTag = 'Outfits.Remove') then
+  else if (g_Tag = 'Outfits.Remove') then
     EvaluateByPathRemove(e, m, 'OTFT')
 
   // Bookmark: R.AddSpells - DEFER: R.ChangeSpells
 
   // Bookmark: R.Attributes-F
-  else if (g_sTag = 'R.Attributes-F') then
+  else if (g_Tag = 'R.Attributes-F') then
     EvaluateByPath(e, m, 'ATTR\Female')
 
   // Bookmark: R.Attributes-M
-  else if (g_sTag = 'R.Attributes-M') then
+  else if (g_Tag = 'R.Attributes-M') then
     EvaluateByPath(e, m, 'ATTR\Male')
 
   // Bookmark: R.Body-F
-  else if (g_sTag = 'R.Body-F') then
+  else if (g_Tag = 'R.Body-F') then
     EvaluateByPath(e, m, 'Body Data\Female Body Data\Parts')
 
   // Bookmark: R.Body-M
-  else if (g_sTag = 'R.Body-M') then
+  else if (g_Tag = 'R.Body-M') then
     EvaluateByPath(e, m, 'Body Data\Male Body Data\Parts')
 
   // Bookmark: R.Body-Size-F
-  else if (g_sTag = 'R.Body-Size-F') then
+  else if (g_Tag = 'R.Body-Size-F') then
   begin
     EvaluateByPath(e, m, 'DATA\Female Height');
     EvaluateByPath(e, m, 'DATA\Female Weight');
   end
 
   // Bookmark: R.Body-Size-M
-  else if (g_sTag = 'R.Body-Size-M') then
+  else if (g_Tag = 'R.Body-Size-M') then
   begin
     EvaluateByPath(e, m, 'DATA\Male Height');
     EvaluateByPath(e, m, 'DATA\Male Weight');
   end
 
   // Bookmark: R.ChangeSpells
-  else if (g_sTag = 'R.ChangeSpells') then
+  else if (g_Tag = 'R.ChangeSpells') then
     EvaluateByPath(e, m, 'Spells')
 
   // Bookmark: R.Description
-  else if (g_sTag = 'R.Description') then
+  else if (g_Tag = 'R.Description') then
     EvaluateByPath(e, m, 'DESC')
 
   // Bookmark: R.Ears
-  else if (g_sTag = 'R.Ears') then
+  else if (g_Tag = 'R.Ears') then
   begin
     EvaluateByPath(e, m, 'Head Data\Male Head Data\Parts\[1]');
     EvaluateByPath(e, m, 'Head Data\Female Head Data\Parts\[1]');
   end
 
   // Bookmark: R.Eyes
-  else if (g_sTag = 'R.Eyes') then
+  else if (g_Tag = 'R.Eyes') then
     EvaluateByPath(e, m, 'ENAM')
 
   // Bookmark: R.Hair
-  else if (g_sTag = 'R.Hair') then
+  else if (g_Tag = 'R.Hair') then
     EvaluateByPath(e, m, 'HNAM')
 
   // Bookmark: R.Head
-  else if (g_sTag = 'R.Head') then
+  else if (g_Tag = 'R.Head') then
   begin
     EvaluateByPath(e, m, 'Head Data\Male Head Data\Parts\[0]');
     EvaluateByPath(e, m, 'Head Data\Female Head Data\Parts\[0]');
@@ -1889,30 +1868,30 @@ begin
   end
 
   // Bookmark: R.Mouth
-  else if (g_sTag = 'R.Mouth') then
+  else if (g_Tag = 'R.Mouth') then
   begin
     EvaluateByPath(e, m, 'Head Data\Male Head Data\Parts\[2]');
     EvaluateByPath(e, m, 'Head Data\Female Head Data\Parts\[2]');
   end
 
   // Bookmark: R.Relations.Add
-  else if (g_sTag = 'R.Relations.Add') then
+  else if (g_Tag = 'R.Relations.Add') then
     EvaluateByPathAdd(e, m, 'Relations')
 
   // Bookmark: R.Relations.Change - TEST
-  else if (g_sTag = 'R.Relations.Change') then
+  else if (g_Tag = 'R.Relations.Change') then
     EvaluateByPathChange(e, m, 'Relations')
 
   // Bookmark: R.Relations.Remove
-  else if (g_sTag = 'R.Relations.Remove') then
+  else if (g_Tag = 'R.Relations.Remove') then
     EvaluateByPathRemove(e, m, 'Relations')
 
   // Bookmark: R.Skills
-  else if (g_sTag = 'R.Skills') then
+  else if (g_Tag = 'R.Skills') then
     EvaluateByPath(e, m, 'DATA\Skill Boosts')
 
   // Bookmark: R.Teeth
-  else if (g_sTag = 'R.Teeth') then
+  else if (g_Tag = 'R.Teeth') then
   begin
     EvaluateByPath(e, m, 'Head Data\Male Head Data\Parts\[3]');
     EvaluateByPath(e, m, 'Head Data\Female Head Data\Parts\[3]');
@@ -1926,35 +1905,35 @@ begin
   end
 
   // Bookmark: R.Voice-F
-  else if (g_sTag = 'R.Voice-F') then
+  else if (g_Tag = 'R.Voice-F') then
     EvaluateByPath(e, m, 'VTCK\Voice #1 (Female)')
 
   // Bookmark: R.Voice-M
-  else if (g_sTag = 'R.Voice-M') then
+  else if (g_Tag = 'R.Voice-M') then
     EvaluateByPath(e, m, 'VTCK\Voice #0 (Male)')
 
   // Bookmark: Relations.Add
-  else if (g_sTag = 'Relations.Add') then
+  else if (g_Tag = 'Relations.Add') then
     EvaluateByPathAdd(e, m, 'Relations')
 
   // Bookmark: Relations.Change - TEST
-  else if (g_sTag = 'Relations.Change') then
+  else if (g_Tag = 'Relations.Change') then
     EvaluateByPathChange(e, m, 'Relations')
 
   // Bookmark: Relations.Remove
-  else if (g_sTag = 'Relations.Remove') then
+  else if (g_Tag = 'Relations.Remove') then
     EvaluateByPathRemove(e, m, 'Relations')
 
   // Bookmark: Roads
-  else if (g_sTag = 'Roads') then
+  else if (g_Tag = 'Roads') then
     EvaluateByPath(e, m, 'PGRP')
 
   // Bookmark: Scripts
-  else if (g_sTag = 'Scripts') then
+  else if (g_Tag = 'Scripts') then
     EvaluateByPath(e, m, 'SCRI')
 
   // Bookmark: Sound
-  else if (g_sTag = 'Sound') then
+  else if (g_Tag = 'Sound') then
   begin
     // Activators, Containers, Doors, and Lights
     if ContainsStr(sSignature, 'ACTI CONT DOOR LIGH') then
@@ -2012,11 +1991,11 @@ begin
   end
 
   // Bookmark: SpellStats
-  else if (g_sTag = 'SpellStats') then
+  else if (g_Tag = 'SpellStats') then
     EvaluateByPath(e, m, 'SPIT')
 
   // Bookmark: Stats
-  else if (g_sTag = 'Stats') then
+  else if (g_Tag = 'Stats') then
   begin
     if ContainsStr(sSignature, 'ALCH AMMO APPA ARMO BOOK CLOT INGR KEYM LIGH MISC SGST SLGM WEAP') then
     begin
@@ -2035,7 +2014,7 @@ begin
   end
 
   // Bookmark: Text
-  else if (g_sTag = 'Text') then
+  else if (g_Tag = 'Text') then
   begin
     if ContainsStr(sSignature, 'ALCH AMMO APPA ARMO AVIF BOOK BSGN CHAL CLAS IMOD LSCR MESG MGEF PERK SCRL SHOU SKIL SPEL TERM WEAP') then
       EvaluateByPath(e, m, 'DESC')
@@ -2053,7 +2032,7 @@ begin
   end
 
   // Bookmark: WeaponMods
-  else if (g_sTag = 'WeaponMods') then
+  else if (g_Tag = 'WeaponMods') then
     EvaluateByPath(e, m, 'Weapon Mods');
 end;
 
@@ -2091,7 +2070,7 @@ begin
 
   if not TagExists('Relev') then
   begin
-    g_sTag := 'Relev';
+    g_Tag := 'Relev';
 
     for i := 0 to Pred(ElementCount(kEntries)) do
     begin
@@ -2103,7 +2082,7 @@ begin
 
       Inc(j);
 
-      if TagExists(g_sTag) then
+      if TagExists(g_Tag) then
         Continue;
 
       if CompareNativeValues(kEntry, kEntryMaster, 'LVLO\Level') then
@@ -2125,7 +2104,7 @@ begin
       if not SameText(sEditValues, sMasterEditValues) then
       begin
         AddLogEntry('Assigned', sEditValues, sMasterEditValues);
-        slSuggestedTags.Add(g_sTag);
+        slSuggestedTags.Add(g_Tag);
         Exit;
       end;
     end;
@@ -2133,23 +2112,24 @@ begin
 
   if not TagExists('Delev') then
   begin
-    g_sTag := 'Delev';
+    g_Tag := 'Delev';
 
     sSignature := Signature(e);
 
     if (((sSignature = 'LVLC') and (wbIsOblivion or wbIsFallout3 or wbIsFalloutNV))
     or (sSignature = 'LVLI') or ((sSignature = 'LVLN') and not wbIsOblivion)
     or ((sSignature = 'LVSP') and (wbIsOblivion or wbIsSkyrim)))
-    and not TagExists(g_sTag) then
+    and not TagExists(g_Tag) then
       // if number of matched entries less than in master list
       if j < ElementCount(kEntriesMaster) then
       begin
         AddLogEntry('ElementCount', kEntries, kEntriesMaster);
-        slSuggestedTags.Add(g_sTag);
+        slSuggestedTags.Add(g_Tag);
         Exit;
       end;
   end;
 end;
+
 
 function AddLogEntry(ATestName: string; AElement: IwbElement; AMaster: IwbElement): string;
 var
@@ -2157,7 +2137,7 @@ var
   sName : string;
   sPath : string;
 begin
-  if optionOutputLog = mrNo then
+  if g_LogTests = mrNo then
     Exit;
 
   if Assigned(AMaster) then
@@ -2174,7 +2154,7 @@ begin
 
   sName := Format('[%s:%s]', [Signature(mr), IntToHex(GetLoadOrderFormID(mr), 8)]);
 
-  slLog.Add(Format('{%s} (%s) %s %s', [g_sTag, ATestName, sName, sPath]));
+  slLog.Add(Format('{%s} (%s) %s %s', [g_Tag, ATestName, sName, sPath]));
 end;
 
 
@@ -2206,57 +2186,44 @@ end;
 
 procedure chkAddTagsClick(Sender: TObject);
 begin
-  optionAddTags := IfThen(optionOutputLog = mrYes, mrNo, mrYes);
+  g_AddTags := IfThen(g_AddTags = mrYes, mrNo, mrYes);
 end;
 
 
 procedure chkLoggingClick(Sender: TObject);
 begin
-  optionOutputLog := IfThen(optionOutputLog = mrYes, mrNo, mrYes);
+  g_LogTests := IfThen(g_LogTests = mrYes, mrNo, mrYes);
 end;
 
 
-function Configure(asCaption: string): IwbFile;
+function ShowPrompt(ACaption: string): integer;
 var
   frm        : TForm;
-  lblPlugins : TLabel;
   chkAddTags : TCheckBox;
   chkLogging : TCheckBox;
-  cbbPlugins : TComboBox;
   btnCancel  : TButton;
   btnOk      : TButton;
   i          : integer;
-
-  kFile      : IwbFile;
 begin
-  Result := nil;
+  Result := mrCancel;
 
   frm := TForm.Create(TForm(frmMain));
 
   try
-    frm.Caption      := asCaption;
+    frm.Caption      := ACaption;
     frm.BorderStyle  := bsToolWindow;
-    frm.ClientWidth  := 234 * scaleFactor;
-    frm.ClientHeight := 154 * scaleFactor;
+    frm.ClientWidth  := 234 * ScaleFactor;
+    frm.ClientHeight := 134 * ScaleFactor;
     frm.Position     := poScreenCenter;
     frm.KeyPreview   := True;
     frm.OnKeyDown    := EscKeyHandler;
 
-    lblPlugins := TLabel.Create(frm);
-    lblPlugins.Parent   := frm;
-    lblPlugins.Left     := 16 * scaleFactor;
-    lblPlugins.Top      := 64 * scaleFactor;
-    lblPlugins.Width    := 200 * scaleFactor;
-    lblPlugins.Height   := 16 * scaleFactor;
-    lblPlugins.Caption  := 'Select file to analyze:';
-    lblPlugins.AutoSize := False;
-
     chkAddTags := TCheckBox.Create(frm);
     chkAddTags.Parent   := frm;
-    chkAddTags.Left     := 16 * scaleFactor;
-    chkAddTags.Top      := 16 * scaleFactor;
-    chkAddTags.Width    := 185 * scaleFactor;
-    chkAddTags.Height   := 16 * scaleFactor;
+    chkAddTags.Left     := 16 * ScaleFactor;
+    chkAddTags.Top      := 16 * ScaleFactor;
+    chkAddTags.Width    := 185 * ScaleFactor;
+    chkAddTags.Height   := 16 * ScaleFactor;
     chkAddTags.Caption  := 'Write suggested tags to header';
     chkAddTags.Checked  := False;
     chkAddTags.OnClick  := chkAddTagsClick;
@@ -2264,40 +2231,21 @@ begin
 
     chkLogging := TCheckBox.Create(frm);
     chkLogging.Parent   := frm;
-    chkLogging.Left     := 16 * scaleFactor;
-    chkLogging.Top      := 39 * scaleFactor;
-    chkLogging.Width    := 185 * scaleFactor;
-    chkLogging.Height   := 16 * scaleFactor;
+    chkLogging.Left     := 16 * ScaleFactor;
+    chkLogging.Top      := 39 * ScaleFactor;
+    chkLogging.Width    := 185 * ScaleFactor;
+    chkLogging.Height   := 16 * ScaleFactor;
     chkLogging.Caption  := 'Log test results to Messages tab';
     chkLogging.Checked  := True;
     chkLogging.OnClick  := chkLoggingClick;
     chkLogging.TabOrder := 1;
 
-    cbbPlugins := TComboBox.Create(frm);
-    cbbPlugins.Parent         := frm;
-    cbbPlugins.Left           := 16 * scaleFactor;
-    cbbPlugins.Top            := 85 * scaleFactor;
-    cbbPlugins.Width          := 200 * scaleFactor;
-    cbbPlugins.Height         := 21 * scaleFactor;
-    cbbPlugins.Style          := csDropDownList;
-    cbbPlugins.DoubleBuffered := True;
-    cbbPlugins.TabOrder       := 2;
-
-    for i := 0 to Pred(FileCount) do
-    begin
-      kFile := FileByIndex(i);
-      if IsEditable(kFile) then
-        cbbPlugins.Items.Add(GetFileName(kFile));
-    end;
-
-    cbbPlugins.ItemIndex      := Pred(cbbPlugins.Items.Count);
-
     btnOk := TButton.Create(frm);
     btnOk.Parent              := frm;
-    btnOk.Left                := 62 * scaleFactor;
-    btnOk.Top                 := 120 * scaleFactor;
-    btnOk.Width               := 75 * scaleFactor;
-    btnOk.Height              := 25 * scaleFactor;
+    btnOk.Left                := 62 * ScaleFactor;
+    btnOk.Top                 := 100 * ScaleFactor;
+    btnOk.Width               := 75 * ScaleFactor;
+    btnOk.Height              := 25 * ScaleFactor;
     btnOk.Caption             := 'Run';
     btnOk.Default             := True;
     btnOk.ModalResult         := mrOk;
@@ -2305,16 +2253,15 @@ begin
 
     btnCancel := TButton.Create(frm);
     btnCancel.Parent          := frm;
-    btnCancel.Left            := 143 * scaleFactor;
-    btnCancel.Top             := 120 * scaleFactor;
-    btnCancel.Width           := 75 * scaleFactor;
-    btnCancel.Height          := 25 * scaleFactor;
+    btnCancel.Left            := 143 * ScaleFactor;
+    btnCancel.Top             := 100 * ScaleFactor;
+    btnCancel.Width           := 75 * ScaleFactor;
+    btnCancel.Height          := 25 * ScaleFactor;
     btnCancel.Caption         := 'Abort';
     btnCancel.ModalResult     := mrAbort;
     btnCancel.TabOrder        := 4;
 
-    if frm.ShowModal = mrOk then
-      Result := FileByName(cbbPlugins.Text);
+    Result := frm.ShowModal;
   finally
     frm.Free;
   end;
