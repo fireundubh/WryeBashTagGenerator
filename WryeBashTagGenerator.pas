@@ -354,10 +354,6 @@ begin
         ProcessTag('Creatures.Blood', e, o);
     end
 
-    // TODO: Npc.EyesOnly - NOT IMPLEMENTED
-    // TODO: Npc.HairOnly - NOT IMPLEMENTED
-    // TODO: R.AddSpells - NOT IMPLEMENTED
-
     else if sSignature = 'RACE' then
     begin
       ProcessTag('R.ChangeSpells', e, o);
@@ -388,21 +384,33 @@ begin
     else if ContainsStr(sSignature, 'ACTI ALCH AMMO ARMO BOOK FLOR FURN INGR KEYM LCTN MGEF MISC NPC_ SCRL SLGM SPEL TACT WEAP') then
       ProcessTag('Keywords', e, o)
 
-    // added in Wrye Bash 307 Beta 6
+    else if sSignature = 'FACT' then
+    begin
+      ProcessTag('Relations.Add', e, o);
+      ProcessTag('Relations.Change', e, o);
+      ProcessTag('Relations.Remove', e, o);
+    end
+
     else if sSignature = 'NPC_' then
     begin
       ProcessTag('Actors.Perks.Add', e, o);
       ProcessTag('Actors.Perks.Change', e, o);
       ProcessTag('Actors.Perks.Remove', e, o);
       ProcessTag('Factions', e, o);
+
+      g_sTag := 'NPC.AIPackageOverrides';
+      if not CompareFlags(e, o, 'ACBS\Template Flags', 'Use AI Packages', False, False) then
+        ProcessTag('NPC.AIPackageOverrides', e, o);
+
+      ProcessTag('NPC.AttackRace', e, o);
+      ProcessTag('NPC.CrimeFaction', e, o);
+      ProcessTag('NPC.DefaultOutfit', e, o);
     end
 
-    // added in Wrye Bash 307 Beta 6
-    else if sSignature = 'FACT' then
+    else if sSignature = 'OTFT' then
     begin
-      ProcessTag('Relations.Add', e, o);
-      ProcessTag('Relations.Change', e, o);
-      ProcessTag('Relations.Remove', e, o);
+      ProcessTag('Outfits.Add', e, o);
+      ProcessTag('Outfits.Remove', e, o);
     end;
   end;
 
@@ -435,7 +443,7 @@ begin
   // -------------------------------------------------------------------------------
   // GROUP: Supported tags exclusive to FO3, FNV, TES4
   // -------------------------------------------------------------------------------
-  if wbIsOblivion or wbIsFallout3 or wbIsFalloutNV then
+  if wbIsFallout3 or wbIsFalloutNV or wbIsOblivion then
   begin
     if ContainsStr(sSignature, 'CREA NPC_') then
     begin
@@ -454,18 +462,24 @@ begin
       end;
     end
 
-    else if sSignature = 'FACT' then
+    else if sSignature = 'RACE' then
     begin
-      ProcessTag('Relations.Add', e, o);
-      ProcessTag('Relations.Change', e, o);
-      ProcessTag('Relations.Remove', e, o);
+      ProcessTag('R.Body-F', e, o);
+      ProcessTag('R.Body-M', e, o);
+      ProcessTag('R.Body-Size-F', e, o);
+      ProcessTag('R.Body-Size-M', e, o);
+      ProcessTag('R.Eyes', e, o);
+      ProcessTag('R.Hair', e, o);
+      ProcessTag('R.Relations.Add', e, o);
+      ProcessTag('R.Relations.Change', e, o);
+      ProcessTag('R.Relations.Remove', e, o);
     end;
   end;
 
   // -------------------------------------------------------------------------------
   // GROUP: Supported tags exclusive to FO3, FNV, TES5, SSE
   // -------------------------------------------------------------------------------
-  if not wbIsOblivion and not wbIsFallout4 then
+  if wbIsFallout3 or wbIsFalloutNV or wbIsSkyrim then
   begin
     if ContainsStr(sSignature, 'CREA NPC_') then
     begin
@@ -504,18 +518,9 @@ begin
 
       if sSignature = 'NPC_' then
       begin
-        g_sTag := 'NPC.AIPackageOverrides';
-        if not CompareFlags(e, o, 'ACBS\Template Flags', 'Use AI Packages', False, False) then
-          ProcessTag('NPC.AIPackageOverrides', e, o);
-
-        ProcessTag('NPC.AttackRace', e, o);
-
         g_sTag := 'NPC.Class';
         if not CompareFlags(e, o, 'ACBS\Template Flags', 'Use Traits', False, False) then
           ProcessTag('NPC.Class', e, o);
-
-        ProcessTag('NPC.CrimeFaction', e, o);
-        ProcessTag('NPC.DefaultOutfit', e, o);
 
         g_sTag := 'NPC.Race';
         if not CompareFlags(e, o, 'ACBS\Template Flags', 'Use Traits', False, False) then
@@ -537,20 +542,11 @@ begin
 
     if sSignature = 'RACE' then
     begin
-      ProcessTag('R.Eyes', e, o);
-      ProcessTag('R.Hair', e, o);
       ProcessTag('R.Ears', e, o);
       ProcessTag('R.Head', e, o);
       ProcessTag('R.Mouth', e, o);
       ProcessTag('R.Teeth', e, o);
-      ProcessTag('R.Relations.Add', e, o);
-      ProcessTag('R.Relations.Change', e, o);
-      ProcessTag('R.Relations.Remove', e, o);
-      ProcessTag('R.Body-F', e, o);
-      ProcessTag('R.Body-M', e, o);
       ProcessTag('R.Skills', e, o);
-      ProcessTag('R.Body-Size-F', e, o);
-      ProcessTag('R.Body-Size-M', e, o);
       ProcessTag('R.Description', e, o);
       ProcessTag('Voice-F', e, o);
       ProcessTag('Voice-M', e, o);
@@ -566,8 +562,7 @@ begin
   // -------------------------------------------------------------------------------
   // GROUP: Supported tags exclusive to FO3, FNV, TES4, TES5, SSE
   // -------------------------------------------------------------------------------
-
-  if not wbIsFallout4 then
+  if wbIsFallout3 or wbIsFalloutNV or wbIsOblivion or wbIsSkyrim then
   begin
     if sSignature = 'CELL' then
     begin
@@ -618,6 +613,13 @@ begin
 
       if sSignature = 'ENCH' then
         ProcessTag('EnchantmentStats', e, o);
+    end;
+
+    if sSignature = 'FACT' then
+    begin
+      ProcessTag('Relations.Add', e, o);
+      ProcessTag('Relations.Change', e, o);
+      ProcessTag('Relations.Remove', e, o);
     end;
 
     if (sSignature = 'WTHR') then
