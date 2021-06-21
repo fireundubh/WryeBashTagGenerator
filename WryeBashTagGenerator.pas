@@ -723,10 +723,7 @@ begin
   if (s <> '0') and (s <> '1') then
     Result := nil
   else
-    if s = '1' then
-      Result := True
-    else
-      Result := False;
+    Result := (s = '1');
 end;
 
 
@@ -769,26 +766,20 @@ begin
 end;
 
 
-function RemoveFromEnd(asSource: string; asSubstring: string): string;
-begin
-  Result := asSource;
-  if EndsText(asSource, asSubstring) then
-    Result := Copy(asSource, 1, Length(asSource) - Length(asSubstring));
-end;
-
-
 function SortKeyEx(const akElement: IInterface): string;
 var
-  kElement: IInterface;
-  i: integer;
+  kElement : IInterface;
+  sName    : string;
+  i        : integer;
 begin
   Result := GetEditValue(akElement);
 
   for i := 0 to Pred(ElementCount(akElement)) do
   begin
     kElement := ElementByIndex(akElement, i);
+    sName    := Name(kElement);
 
-    if SameText(Name(kElement), 'unknown') or SameText(Name(kElement), 'unused') then
+    if SameText(sName, 'unknown') or SameText(sName, 'unused') then
       Continue;
 
     if Result <> '' then
