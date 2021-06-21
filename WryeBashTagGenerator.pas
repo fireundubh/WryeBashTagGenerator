@@ -1,7 +1,9 @@
 {
-  Purpose: Generates bash tags for a selected plugin automatically
-  Games:   FO3/FNV/FO4/TES4/TES5/SSE/Enderal
-  Author:  fireundubh <fireundubh@gmail.com>
+  Generates bash tags for a selected plugin automatically
+
+  Games:  FO3/FNV/FO4/TES4/TES5/SSE/Enderal/EnderalSE
+  Author: fireundubh <fireundubh@gmail.com>
+  Hotkey: F12
 }
 
 unit WryeBashTagGenerator;
@@ -9,7 +11,7 @@ unit WryeBashTagGenerator;
 
 const
   ScriptName    = 'WryeBashTagGenerator';
-  ScriptVersion = '1.6.4.4';
+  ScriptVersion = '1.6.4.5';
   ScriptAuthor  = 'fireundubh';
   ScriptEmail   = 'fireundubh@gmail.com';
   ScaleFactor   = Screen.PixelsPerInch / 96;
@@ -176,7 +178,6 @@ function ProcessFile(f: IwbFile): integer;
 var
   kDescription : IwbElement;
   kHeader      : IwbElement;
-  sBashTags    : string;
   sDescription : string;
   sMasterName  : string;
   r            : IwbMainRecord;
@@ -207,13 +208,7 @@ begin
     kDescription := ElementBySignature(kHeader, 'SNAM');
     sDescription := GetEditValue(kDescription);
 
-    sBashTags := RegExMatch('{{BASH:.*?}}', sDescription);
-    if sBashTags <> '' then
-    begin
-      sBashTags := Trim(MidStr(sBashTags, 8, Length(sBashTags) - 9));
-      slExistingTags.CommaText := sBashTags;
-    end else
-      slExistingTags.CommaText := '';
+    slExistingTags.CommaText := RegExMatchGroup('{{BASH:(.*?)}}', sDescription, 1);
 
     StringListIntersection(slExistingTags, slDeprecatedTags, slBadTags);
     LogInfo(FormatTags(slBadTags, 'deprecated tag found:', 'deprecated tags found:', 'No deprecated tags found.'));
@@ -700,7 +695,7 @@ begin
 end;
 
 
-function RegExMatch(AExpr: string; ASubj: string): string;
+function RegExMatchGroup(AExpr: string; ASubj: string; AGroup: integer): string;
 var
   re     : TPerlRegEx;
 begin
@@ -711,7 +706,7 @@ begin
     re.Options := [];
     re.Subject := ASubj;
     if re.Match then
-      Result := re.MatchedText;
+      Result := re.Groups[AGroup];
   finally
     re.Free;
   end;
