@@ -1331,7 +1331,7 @@ begin
 
   // Bookmark: Actors.Perks.Remove (TES5, SSE)
   else if (g_sTag = 'Actors.Perks.Remove') then
-    EvaluateByPathAdd(e, m, 'Perks')
+    EvaluateByPathRemove(e, m, 'Perks')
 
   // Bookmark: Actors.RecordFlags (!FO4)
   else if (g_sTag = 'Actors.RecordFlags') then
@@ -1888,7 +1888,7 @@ begin
 
   // Bookmark: Outfits.Remove
   else if (g_sTag = 'Outfits.Remove') then
-    EvaluateByPathAdd(e, m, 'OTFT')
+    EvaluateByPathRemove(e, m, 'OTFT')
 
   // Bookmark: R.AddSpells - DEFER: R.ChangeSpells
 
