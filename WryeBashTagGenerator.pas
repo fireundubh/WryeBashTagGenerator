@@ -22,7 +22,6 @@ var
   slLog            : TStringList;
   slSuggestedTags  : TStringList;
   slDeprecatedTags : TStringList;
-  slMasterPlugins  : TStringList;
   g_FileName       : string;
   g_Tag            : string;
   g_AddTags        : integer;
@@ -132,10 +131,6 @@ begin
   slDeprecatedTags := TStringList.Create;
   slDeprecatedTags.CommaText := 'Body-F,Body-M,Body-Size-F,Body-Size-M,C.GridFlags,Derel,Eyes,Eyes-D,Eyes-E,Eyes-R,Hair,Invent,InventOnly,Merge,Npc.EyesOnly,Npc.HairOnly,NpcFaces,R.Relations,Relations,ScriptContents';
 
-  slMasterPlugins := TStringList.Create;
-  slMasterPlugins.Duplicates := dupIgnore;
-  slMasterPlugins.Sorted     := True;
-
   if ShowPrompt(ScriptName + ' v' + ScriptVersion) = mrAbort then
   begin
     LogError('Cannot proceed because user aborted execution');
@@ -195,8 +190,6 @@ begin
 
   for i := 0 to Pred(RecordCount(f)) do
     ProcessRecord(RecordByIndex(f, i));
-
-  slMasterPlugins.Clear;
 
   LogInfo('--------------------------------------------------------------------------------');
   LogInfo(g_FileName);
@@ -695,7 +688,6 @@ begin
   slDifferentTags.Free;
   slBadTags.Free;
   slDeprecatedTags.Free;
-  slMasterPlugins.Free;
 end;
 
 
