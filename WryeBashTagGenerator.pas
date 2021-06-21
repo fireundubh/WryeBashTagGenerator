@@ -112,7 +112,7 @@ var
   i            : integer;
 begin
   sScriptName    := 'WryeBashTagGenerator';
-  sScriptVersion := '1.6.4.1';
+  sScriptVersion := '1.6.4.2';
   sScriptAuthor  := 'fireundubh';
   sScriptEmail   := 'fireundubh@gmail.com';
 
@@ -551,9 +551,6 @@ begin
       ProcessTag('Voice-F', e, o);
       ProcessTag('Voice-M', e, o);
     end;
-
-    // TODO: ScriptContents - SHOULD NOT BE IMPLEMENTED
-    // -- According to the Wrye Bash Readme: "Should not be used. Can cause serious issues."
 
     if ContainsStr(sSignature, 'ACTI ALCH ARMO CONT DOOR FLOR FURN INGR KEYM LIGH LVLC MISC QUST WEAP') then
       ProcessTag('Scripts', e, o);
