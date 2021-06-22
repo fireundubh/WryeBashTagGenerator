@@ -32,55 +32,55 @@ var
 
 function wbIsOblivion: boolean;
 begin
-  Result := wbGameMode = gmTES4;
+  Result := wbGameMode = 1;
 end;
 
 
 function wbIsSkyrim: boolean;
 begin
-  Result := (wbGameMode = gmTES5) or (wbGameMode = gmEnderal) or (wbGameMode = gmTES5VR) or (wbGameMode = gmSSE) or (wbGameMode = gmEnderalSE);
+  Result := (wbGameMode = 4) or (wbGameMode = 5) or (wbGameMode = 7) or (wbGameMode = 8) or (wbGameMode = 9);
 end;
 
 
 function wbIsSkyrimSE: boolean;
 begin
-  Result := (wbGameMode = gmSSE) or (wbGameMode = gmEnderalSE);
+  Result := (wbGameMode = 7) or (wbGameMode = 9);
 end;
 
 
 function wbIsFallout3: boolean;
 begin
-  Result := wbGameMode = gmFO3;
+  Result := wbGameMode = 2;
 end;
 
 
 function wbIsFalloutNV: boolean;
 begin
-  Result := wbGameMode = gmFNV;
+  Result := wbGameMode = 3;
 end;
 
 
 function wbIsFallout4: boolean;
 begin
-  Result := (wbGameMode = gmFO4) or (wbGameMode = gmFO4VR);
+  Result := (wbGameMode = 6) or (wbGameMode = 10);
 end;
 
 
 function wbIsFallout76: boolean;
 begin
-  Result := wbGameMode = gmFO76;
+  Result := wbGameMode = 11;
 end;
 
 
 function wbIsEnderal: boolean;
 begin
-  Result := wbGameMode = gmEnderal;
+  Result := wbGameMode = 5;
 end;
 
 
 function wbIsEnderalSE: boolean;
 begin
-  Result := wbGameMode = gmEnderalSE;
+  Result := wbGameMode = 9;
 end;
 
 
