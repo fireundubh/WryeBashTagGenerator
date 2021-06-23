@@ -26,8 +26,8 @@ var
   slDeprecatedTags : TStringList;
   g_FileName       : string;
   g_Tag            : string;
-  g_AddTags        : integer;
-  g_LogTests       : integer;
+  g_AddTags        : boolean;
+  g_LogTests       : boolean;
 
 
 function wbIsOblivion: boolean;
@@ -110,8 +110,8 @@ begin
   LogInfo(ScriptName + ' v' + ScriptVersion + ' by ' + ScriptAuthor + ' <' + ScriptEmail + '>');
   LogInfo('--------------------------------------------------------------------------------');
 
-  g_AddTags  := mrNo;
-  g_LogTests := mrYes;
+  g_AddTags  := False;
+  g_LogTests := True;
 
   slLog := TStringList.Create;
   slLog.Sorted     := False;
@@ -179,6 +179,7 @@ var
   kDescription : IwbElement;
   kHeader      : IwbElement;
   sDescription : string;
+  sTags        : string;
   sMasterName  : string;
   r            : IwbMainRecord;
   i            : integer;
@@ -196,7 +197,7 @@ begin
   LogInfo(g_FileName);
   LogInfo('-------------------------------------------------------------------------- TESTS');
 
-  if g_LogTests = mrYes then
+  if g_LogTests then
     for i := 0 to Pred(slLog.Count) do
       LogInfo(slLog[i]);
 
@@ -226,18 +227,27 @@ begin
       Exit;
     end;
 
-    if g_AddTags = mrYes then
+    if g_AddTags then
     begin
       // if the description element doesn't exist, add the element
       kDescription := ElementBySignature(kHeader, 'SNAM');
       if not Assigned(kDescription) then
         kDescription := Add(kHeader, 'SNAM', True);
 
-      if not SameText(slExistingTags.CommaText, slSuggestedTags.CommaText) then
+      sDescription := GetEditValue(kDescription);
+      sTags        := Format('{{BASH:%s}}', [slSuggestedTags.DelimitedText]);
+
+      if (Length(sDescription) = 0) and (slSuggestedTags.Count > 0) then
+        sDescription := sTags
+      else if not SameText(slExistingTags.CommaText, slSuggestedTags.CommaText) then
       begin
-        sDescription := RegExReplace('{{BASH:.*?}}', Format('{{BASH:%s}}', [slSuggestedTags.DelimitedText]), GetEditValue(kDescription));
-        SetEditValue(kDescription, sDescription);
+        if slExistingTags.Count = 0 then
+          sDescription := sDescription + #10#10 +sTags
+        else
+          sDescription := RegExReplace('{{BASH:.*?}}', sTags, sDescription);
       end;
+
+      SetEditValue(kDescription, sDescription);
 
       LogInfo(FormatTags(slBadTags,       'bad tag removed:',          'bad tags removed:',          'No bad tags found.'));
       LogInfo(FormatTags(slDifferentTags, 'tag added to file header:', 'tags added to file header:', 'No tags added.'));
@@ -2124,7 +2134,7 @@ var
   sName : string;
   sPath : string;
 begin
-  if g_LogTests = mrNo then
+  if not g_LogTests then
     Exit;
 
   if Assigned(AMaster) then
@@ -2173,13 +2183,13 @@ end;
 
 procedure chkAddTagsClick(Sender: TObject);
 begin
-  g_AddTags := IfThen(g_AddTags = mrYes, mrNo, mrYes);
+  g_AddTags := Sender.Checked;
 end;
 
 
 procedure chkLoggingClick(Sender: TObject);
 begin
-  g_LogTests := IfThen(g_LogTests = mrYes, mrNo, mrYes);
+  g_LogTests := Sender.Checked;
 end;
 
 
@@ -2213,6 +2223,7 @@ begin
     chkAddTags.Height   := 16 * ScaleFactor;
     chkAddTags.Caption  := 'Write suggested tags to header';
     chkAddTags.Checked  := False;
+    g_AddTags := chkAddTags.Checked;
     chkAddTags.OnClick  := chkAddTagsClick;
     chkAddTags.TabOrder := 0;
 
@@ -2224,6 +2235,7 @@ begin
     chkLogging.Height   := 16 * ScaleFactor;
     chkLogging.Caption  := 'Log test results to Messages tab';
     chkLogging.Checked  := True;
+    g_LogTests := chkLogging.Checked;
     chkLogging.OnClick  := chkLoggingClick;
     chkLogging.TabOrder := 1;
 
