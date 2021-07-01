@@ -11,7 +11,7 @@ unit WryeBashTagGenerator;
 
 const
   ScriptName    = 'WryeBashTagGenerator';
-  ScriptVersion = '1.6.4.6';
+  ScriptVersion = '1.6.4.7';
   ScriptAuthor  = 'fireundubh';
   ScriptEmail   = 'fireundubh@gmail.com';
   ScaleFactor   = Screen.PixelsPerInch / 96;
@@ -289,7 +289,7 @@ begin
   // exit if the record should not be processed
   if SameText(g_FileName, 'Dawnguard.esm') then
   begin
-    iFormID := FileFormID(e);
+    iFormID := GetLoadOrderFormID(e) and $00FFFFFF;
     if (iFormID = $00016BCF)
     or (iFormID = $0001EE6D)
     or (iFormID = $0001FA4C)
