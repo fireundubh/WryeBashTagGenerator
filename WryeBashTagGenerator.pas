@@ -412,7 +412,7 @@ begin
     // special handling for CREA and NPC_ record types
     else if ContainsStr(sSignature, 'CREA NPC_') then
       if not CompareFlags(e, o, 'ACBS\Template Flags', 'Use Model/Animation', False, False) then
-        ProcessTag('Destructible', e, o);
+        ProcessTag('Destructible', e, o)
 
     // added in Wrye Bash 307 Beta 6
     else if sSignature = 'FACT' then
@@ -593,6 +593,9 @@ begin
 
       if sSignature = 'ENCH' then
         ProcessTag('EnchantmentStats', e, o);
+
+      if sSignature = 'SPEL' then
+        ProcessTag('SpellStats', e, o);
     end;
 
     if sSignature = 'FACT' then
@@ -1364,8 +1367,8 @@ begin
   else if (g_Tag = 'C.Music') then
     EvaluateByPath(e, m, 'XCMO')
 
-  // Bookmark: FULL (C.Name, Names, SpellStats)
-  else if ContainsStr(g_Tag, 'C.Name Names SpellStats') then
+  // Bookmark: FULL (C.Name, Names)
+  else if ContainsStr('C.Name Names', g_Tag) then
     EvaluateByPath(e, m, 'FULL')
 
   // Bookmark: C.Owner
