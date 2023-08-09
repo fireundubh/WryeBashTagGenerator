@@ -110,7 +110,7 @@ begin
   LogInfo(ScriptName + ' v' + ScriptVersion + ' by ' + ScriptAuthor + ' <' + ScriptEmail + '>');
   LogInfo('--------------------------------------------------------------------------------');
 
-  g_AddTags  := False;
+  g_AddTags  := True;
   g_LogTests := True;
 
   slLog := TStringList.Create;
