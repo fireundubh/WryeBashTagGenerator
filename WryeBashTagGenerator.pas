@@ -498,7 +498,7 @@ begin
       if not CompareFlags(e, o, 'ACBS\Template Flags', 'Use Stats', False, False) then
         ProcessTag('Actors.Stats', e, o);
 
-      if wbIsFallout3 or wbIsFalloutNV or (sSignature = 'NPC_')
+      if wbIsFallout3 or wbIsFalloutNV or (sSignature = 'NPC_') then
         ProcessTag('Actors.Voice', e, o);
 
       if sSignature = 'NPC_' then
@@ -860,10 +860,10 @@ end;
 
 function CompareFlags(AElement: IwbElement; AMaster: IwbElement; APath: string; AFlagName: string; ASuggest: boolean; ANotOperator: boolean): boolean;
 var
-  x         : IInterface;
-  y         : IInterface;
-  a         : IInterface;
-  b         : IInterface;
+  x         : IwbElement;
+  y         : IwbElement;
+  a         : IwbElement;
+  b         : IwbElement;
   sa        : string;
   sb        : string;
   sTestName : string;
@@ -1367,7 +1367,7 @@ begin
     EvaluateByPath(e, m, 'XCMO')
 
   // Bookmark: FULL (C.Name, Names, SpellStats)
-  else if ContainsStr(g_Tag, 'C.Name Names SpellStats') then
+  else if ContainsStr('C.Name Names SpellStats', g_Tag) then
     EvaluateByPath(e, m, 'FULL')
 
   // Bookmark: C.Owner
@@ -1975,7 +1975,7 @@ begin
         EvaluateByPath(e, m, 'SNDD')
 
       // FO3, FNV, TES4
-      else then
+      else
       begin
         EvaluateByPath(e, m, 'DATA\Effect sound');
         EvaluateByPath(e, m, 'DATA\Bolt sound');
@@ -2102,7 +2102,7 @@ begin
 
       if not SameText(sEditValues, sMasterEditValues) then
       begin
-        AddLogEntry('Assigned', sEditValues, sMasterEditValues);
+        AddLogEntry('Assigned', kCOED, kCOEDMaster);
         slSuggestedTags.Add(g_Tag);
         Exit;
       end;
@@ -2113,7 +2113,7 @@ begin
   begin
     g_Tag := 'Delev';
 
-    sSignature := Signature(e);
+    sSignature := Signature(ARecord);
 
     if (((sSignature = 'LVLC') and (wbIsOblivion or wbIsFallout3 or wbIsFalloutNV))
     or (sSignature = 'LVLI') or ((sSignature = 'LVLN') and not wbIsOblivion)
