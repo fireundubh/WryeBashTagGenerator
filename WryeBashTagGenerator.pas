@@ -595,6 +595,9 @@ begin
 
       if sSignature = 'ENCH' then
         ProcessTag('EnchantmentStats', e, o);
+
+      if sSignature = 'SPEL' then
+        ProcessTag('SpellStats', e, o);
     end;
 
     if sSignature = 'FACT' then
@@ -1366,8 +1369,8 @@ begin
   else if (g_Tag = 'C.Music') then
     EvaluateByPath(e, m, 'XCMO')
 
-  // Bookmark: FULL (C.Name, Names, SpellStats)
-  else if ContainsStr('C.Name Names SpellStats', g_Tag) then
+  // Bookmark: FULL (C.Name, Names)
+  else if ContainsStr('C.Name Names', g_Tag) then
     EvaluateByPath(e, m, 'FULL')
 
   // Bookmark: C.Owner
