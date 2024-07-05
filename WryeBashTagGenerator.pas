@@ -412,7 +412,7 @@ begin
     // special handling for CREA and NPC_ record types
     else if ContainsStr(sSignature, 'CREA NPC_') then
       if not CompareFlags(e, o, 'ACBS\Template Flags', 'Use Model/Animation', False, False) then
-        ProcessTag('Destructible', e, o)
+        ProcessTag('Destructible', e, o);
 
     // added in Wrye Bash 307 Beta 6
     else if sSignature = 'FACT' then
