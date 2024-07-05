@@ -11,7 +11,7 @@ unit WryeBashTagGenerator;
 
 const
   ScriptName    = 'WryeBashTagGenerator';
-  ScriptVersion = '1.6.4.7';
+  ScriptVersion = '1.6.4.8';
   ScriptAuthor  = 'fireundubh';
   ScriptEmail   = 'fireundubh@gmail.com';
   ScaleFactor   = Screen.PixelsPerInch / 96;
@@ -211,12 +211,21 @@ begin
 
     slExistingTags.CommaText := RegExMatchGroup('{{BASH:(.*?)}}', sDescription, 1);
 
-    StringListIntersection(slExistingTags, slDeprecatedTags, slBadTags);
+    // in-place intersection output: slBadTags
+    slBadTags.AddStrings(slExistingTags);
+    slBadTags.Intersection(slDeprecatedTags);
+
     LogInfo(FormatTags(slBadTags, 'deprecated tag found:', 'deprecated tags found:', 'No deprecated tags found.'));
     slBadTags.Clear;
 
-    StringListDifference(slSuggestedTags, slExistingTags, slDifferentTags);
-    StringListDifference(slExistingTags, slSuggestedTags, slBadTags);
+    // in-place difference output: slDifferentTags
+    slDifferentTags.AddStrings(slSuggestedTags);
+    slDifferentTags.Difference(slExistingTags);
+
+    // in-place difference output: slBadTags
+    slBadTags.AddStrings(slExistingTags);
+    slBadTags.Difference(slSuggestedTags);
+
     slSuggestedTags.AddStrings(slDifferentTags);
 
     if SameText(slExistingTags.CommaText, slSuggestedTags.CommaText) then
@@ -975,28 +984,6 @@ begin
       Exit;
     end;
   end;
-end;
-
-
-// TODO: natively implemented in 4.1.4
-procedure StringListDifference(ASet: TStringList; AOtherSet: TStringList; AOutput: TStringList);
-var
-  i : integer;
-begin
-  for i := 0 to Pred(ASet.Count) do
-    if AOtherSet.IndexOf(ASet[i]) = -1 then
-      AOutput.Add(ASet[i]);
-end;
-
-
-// TODO: natively implemented in 4.1.4
-procedure StringListIntersection(ASet: TStringList; AOtherSet: TStringList; AOutput: TStringList);
-var
-  i : integer;
-begin
-  for i := 0 to Pred(ASet.Count) do
-    if AOtherSet.IndexOf(ASet[i]) > -1 then
-      AOutput.Add(ASet[i]);
 end;
 
 
