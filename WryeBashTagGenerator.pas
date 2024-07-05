@@ -16,8 +16,6 @@ Const
   ScriptEmail   = 'fireundubh@gmail.com';
   ScaleFactor   = Screen.PixelsPerInch / 96;
 
-  FilePath    = DataPath + 'BashTags\';
-
 
 Var 
   slBadTags        : TStringList;
@@ -114,7 +112,7 @@ Begin
   LogInfo('--------------------------------------------------------------------------------');
   LogInfo(ScriptName + ' v' + ScriptVersion + ' by ' + ScriptAuthor + ' <' + ScriptEmail + '>');
   LogInfo('--------------------------------------------------------------------------------');
-  LogInfo(FilePath);
+  LogInfo(DataPath);
 
 
   g_AddTags  := True;
@@ -282,7 +280,7 @@ Begin
       If g_AddFile Then // Write tags to text file
         Begin
           slOutToFileTags.Add (slSuggestedTags.DelimitedText);
-          slOutToFileTags.SaveToFile (FilePath+ChangeFileExt(g_FileName, '.txt'));
+          slOutToFileTags.SaveToFile (DataPath + 'BashTags\' + ChangeFileExt(g_FileName, '.txt'));
           slOutToFileTags.Clear;
           LogInfo('Finished writing auggested bash tags to file');
         End
