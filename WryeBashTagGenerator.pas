@@ -188,7 +188,7 @@ begin
 
   AddMessage(#10);
 
-  LogInfo('Processing... Please wait. This could take a while.');
+  LogInfo('Processing... ' + IntToStr(RecordCount(f)) + ' records. Please wait. This could take a while.');
 
   for i := 0 to Pred(RecordCount(f)) do
     ProcessRecord(RecordByIndex(f, i));
@@ -317,6 +317,8 @@ begin
 
   sSignature := Signature(e);
 
+  LogInfo(Name(e));
+
   // -------------------------------------------------------------------------------
   // GROUP: Supported tags exclusive to FNV
   // -------------------------------------------------------------------------------
@@ -329,7 +331,7 @@ begin
   // -------------------------------------------------------------------------------
   if wbIsOblivion then
   begin
-    if ContainsStr(sSignature, 'CREA NPC_') then
+    if ContainsStr('CREA NPC_', sSignature) then
     begin
       ProcessTag('Actors.Spells', e, o);
 
@@ -364,7 +366,7 @@ begin
       ProcessTag('C.SkyLighting', e, o);
     end
 
-    else if ContainsStr(sSignature, 'ACTI ALCH AMMO ARMO BOOK FLOR FURN INGR KEYM LCTN MGEF MISC NPC_ SCRL SLGM SPEL TACT WEAP') then
+    else if ContainsStr('ACTI ALCH AMMO ARMO BOOK FLOR FURN INGR KEYM LCTN MGEF MISC NPC_ SCRL SLGM SPEL TACT WEAP', sSignature) then
       ProcessTag('Keywords', e, o)
 
     else if sSignature = 'FACT' then
@@ -406,11 +408,11 @@ begin
       ProcessTag('Deflst', e, o);
 
     g_Tag := 'Destructible';
-    if ContainsStr(sSignature, 'ACTI ALCH AMMO BOOK CONT DOOR FURN IMOD KEYM MISC MSTT PROJ TACT TERM WEAP') then
+    if ContainsStr('ACTI ALCH AMMO BOOK CONT DOOR FURN IMOD KEYM MISC MSTT PROJ TACT TERM WEAP', sSignature) then
       ProcessTag('Destructible', e, o)
 
     // special handling for CREA and NPC_ record types
-    else if ContainsStr(sSignature, 'CREA NPC_') then
+    else if ContainsStr('CREA NPC_', sSignature) then
       if not CompareFlags(e, o, 'ACBS\Template Flags', 'Use Model/Animation', False, False) then
         ProcessTag('Destructible', e, o)
 
@@ -428,7 +430,7 @@ begin
   // -------------------------------------------------------------------------------
   if wbIsFallout3 or wbIsFalloutNV or wbIsOblivion then
   begin
-    if ContainsStr(sSignature, 'CREA NPC_') then
+    if ContainsStr('CREA NPC_', sSignature) then
     begin
       if sSignature = 'CREA' then
         ProcessTag('Creatures.Type', e, o);
@@ -464,7 +466,7 @@ begin
   // -------------------------------------------------------------------------------
   if wbIsFallout3 or wbIsFalloutNV or wbIsSkyrim then
   begin
-    if ContainsStr(sSignature, 'CREA NPC_') then
+    if ContainsStr('CREA NPC_', sSignature) then
     begin
       g_Tag := 'Actors.ACBS';
       if not CompareFlags(e, o, 'ACBS\Template Flags', 'Use Stats', False, False) then
@@ -535,7 +537,7 @@ begin
       ProcessTag('Voice-M', e, o);
     end;
 
-    if ContainsStr(sSignature, 'ACTI ALCH ARMO CONT DOOR FLOR FURN INGR KEYM LIGH LVLC MISC QUST WEAP') then
+    if ContainsStr('ACTI ALCH ARMO CONT DOOR FLOR FURN INGR KEYM LIGH LVLC MISC QUST WEAP', sSignature) then
       ProcessTag('Scripts', e, o);
   end;
 
@@ -557,16 +559,16 @@ begin
     end;
 
     // TAG: Delev, Relev
-    if ContainsStr(sSignature, 'LVLC LVLI LVLN LVSP') then
+    if ContainsStr('LVLC LVLI LVLN LVSP', sSignature) then
       ProcessDelevRelevTags(e, o);
 
-    if ContainsStr(sSignature, 'ACTI ALCH AMMO APPA ARMO BOOK BSGN CLAS CLOT DOOR FLOR FURN INGR KEYM LIGH MGEF MISC SGST SLGM WEAP') then
+    if ContainsStr('ACTI ALCH AMMO APPA ARMO BOOK BSGN CLAS CLOT DOOR FLOR FURN INGR KEYM LIGH MGEF MISC SGST SLGM WEAP', sSignature) then
     begin
       ProcessTag('Graphics', e, o);
       ProcessTag('Names', e, o);
       ProcessTag('Stats', e, o);
 
-      if ContainsStr(sSignature, 'ACTI DOOR LIGH MGEF') then
+      if ContainsStr('ACTI DOOR LIGH MGEF', sSignature) then
       begin
         ProcessTag('Sound', e, o);
 
@@ -575,7 +577,7 @@ begin
       end;
     end;
 
-    if ContainsStr(sSignature, 'CREA EFSH GRAS LSCR LTEX REGN STAT TREE') then
+    if ContainsStr('CREA EFSH GRAS LSCR LTEX REGN STAT TREE', sSignature) then
       ProcessTag('Graphics', e, o);
 
     if sSignature = 'CONT' then
@@ -587,7 +589,7 @@ begin
       ProcessTag('Sound', e, o);
     end;
 
-    if ContainsStr(sSignature, 'DIAL ENCH EYES FACT HAIR QUST RACE SPEL WRLD') then
+    if ContainsStr('DIAL ENCH EYES FACT HAIR QUST RACE SPEL WRLD', sSignature) then
     begin
       ProcessTag('Names', e, o);
 
@@ -606,7 +608,7 @@ begin
       ProcessTag('Sound', e, o);
 
     // special handling for CREA and NPC_
-    if ContainsStr(sSignature, 'CREA NPC_') then
+    if ContainsStr('CREA NPC_', sSignature) then
     begin
       if wbIsOblivion or wbIsFallout3 or wbIsFalloutNV or (sSignature = 'NPC_') then
         ProcessTag('Actors.RecordFlags', e, o);
@@ -653,16 +655,16 @@ begin
   // ObjectBounds
   g_Tag := 'ObjectBounds';
 
-  if wbIsFallout3 and ContainsStr(sSignature, 'ACTI ADDN ALCH AMMO ARMA ARMO ASPC BOOK COBJ CONT CREA DOOR EXPL FURN GRAS IDLM INGR KEYM LIGH LVLC LVLI LVLN MISC MSTT NOTE NPC_ PROJ PWAT SCOL SOUN STAT TACT TERM TREE TXST WEAP') then
+  if wbIsFallout3 and ContainsStr('ACTI ADDN ALCH AMMO ARMA ARMO ASPC BOOK COBJ CONT CREA DOOR EXPL FURN GRAS IDLM INGR KEYM LIGH LVLC LVLI LVLN MISC MSTT NOTE NPC_ PROJ PWAT SCOL SOUN STAT TACT TERM TREE TXST WEAP', sSignature) then
     ProcessTag(g_Tag, e, o);
 
-  if wbIsFalloutNV and ContainsStr(sSignature, 'ACTI ADDN ALCH AMMO ARMA ARMO ASPC BOOK CCRD CHIP CMNY COBJ CONT CREA DOOR EXPL FURN GRAS IDLM IMOD INGR KEYM LIGH LVLC LVLI LVLN MISC MSTT NOTE NPC_ PROJ PWAT SCOL SOUN STAT TACT TERM TREE TXST WEAP') then
+  if wbIsFalloutNV and ContainsStr('ACTI ADDN ALCH AMMO ARMA ARMO ASPC BOOK CCRD CHIP CMNY COBJ CONT CREA DOOR EXPL FURN GRAS IDLM IMOD INGR KEYM LIGH LVLC LVLI LVLN MISC MSTT NOTE NPC_ PROJ PWAT SCOL SOUN STAT TACT TERM TREE TXST WEAP', sSignature) then
     ProcessTag(g_Tag, e, o);
 
-  if wbIsSkyrim and ContainsStr(sSignature, 'ACTI ADDN ALCH AMMO APPA ARMO ARTO ASPC BOOK CONT DOOR DUAL ENCH EXPL FLOR FURN GRAS HAZD IDLM INGR KEYM LIGH LVLI LVLN LVSP MISC MSTT NPC_ PROJ SCRL SLGM SOUN SPEL STAT TACT TREE TXST WEAP') then
+  if wbIsSkyrim and ContainsStr('ACTI ADDN ALCH AMMO APPA ARMO ARTO ASPC BOOK CONT DOOR DUAL ENCH EXPL FLOR FURN GRAS HAZD IDLM INGR KEYM LIGH LVLI LVLN LVSP MISC MSTT NPC_ PROJ SCRL SLGM SOUN SPEL STAT TACT TREE TXST WEAP', sSignature) then
     ProcessTag(g_Tag, e, o);
 
-  if wbIsFallout4 and ContainsStr(sSignature, 'LVLI LVLN') then
+  if wbIsFallout4 and ContainsStr('LVLI LVLN', sSignature) then
     ProcessTag(g_Tag, e, o);
 
   // Text
@@ -670,16 +672,16 @@ begin
   begin
     g_Tag := 'Text';
 
-    if wbIsOblivion and ContainsStr(sSignature, 'BOOK BSGN CLAS LSCR MGEF SKIL') then
+    if wbIsOblivion and ContainsStr('BOOK BSGN CLAS LSCR MGEF SKIL', sSignature) then
       ProcessTag(g_Tag, e, o);
 
-    if wbIsFallout3 and ContainsStr(sSignature, 'AVIF BOOK CLAS LSCR MESG MGEF NOTE PERK TERM') then
+    if wbIsFallout3 and ContainsStr('AVIF BOOK CLAS LSCR MESG MGEF NOTE PERK TERM', sSignature) then
       ProcessTag(g_Tag, e, o);
 
-    if wbIsFalloutNV and ContainsStr(sSignature, 'AVIF BOOK CHAL CLAS IMOD LSCR MESG MGEF NOTE PERK TERM') then
+    if wbIsFalloutNV and ContainsStr('AVIF BOOK CHAL CLAS IMOD LSCR MESG MGEF NOTE PERK TERM', sSignature) then
       ProcessTag(g_Tag, e, o);
 
-    if wbIsSkyrim and ContainsStr(sSignature, 'ALCH AMMO APPA ARMO AVIF BOOK CLAS LSCR MESG MGEF SCRL SHOU SPEL WEAP') then
+    if wbIsSkyrim and ContainsStr('ALCH AMMO APPA ARMO AVIF BOOK CLAS LSCR MESG MGEF SCRL SHOU SPEL WEAP', sSignature) then
       ProcessTag(g_Tag, e, o);
   end;
 end;
@@ -1549,18 +1551,18 @@ begin
   else if (g_Tag = 'Graphics') then
   begin
     // evaluate Icon and Model properties
-    if ContainsStr(sSignature, 'ALCH AMMO APPA BOOK INGR KEYM LIGH MGEF MISC SGST SLGM TREE WEAP') then
+    if ContainsStr('ALCH AMMO APPA BOOK INGR KEYM LIGH MGEF MISC SGST SLGM TREE WEAP', sSignature) then
     begin
       EvaluateByPath(e, m, 'Icon');
       EvaluateByPath(e, m, 'Model');
     end
 
     // evaluate Icon properties
-    else if ContainsStr(sSignature, 'BSGN CLAS LSCR LTEX REGN') then
+    else if ContainsStr('BSGN CLAS LSCR LTEX REGN', sSignature) then
       EvaluateByPath(e, m, 'Icon')
 
     // evaluate Model properties
-    else if ContainsStr(sSignature, 'ACTI DOOR FLOR FURN GRAS STAT') then
+    else if ContainsStr('ACTI DOOR FLOR FURN GRAS STAT', sSignature) then
       EvaluateByPath(e, m, 'Model')
 
     // evaluate ARMO properties
@@ -1933,7 +1935,7 @@ begin
   else if (g_Tag = 'Sound') then
   begin
     // Activators, Containers, Doors, and Lights
-    if ContainsStr(sSignature, 'ACTI CONT DOOR LIGH') then
+    if ContainsStr('ACTI CONT DOOR LIGH', sSignature) then
     begin
       EvaluateByPath(e, m, 'SNAM');
 
@@ -1994,12 +1996,12 @@ begin
   // Bookmark: Stats
   else if (g_Tag = 'Stats') then
   begin
-    if ContainsStr(sSignature, 'ALCH AMMO APPA ARMO BOOK CLOT INGR KEYM LIGH MISC SGST SLGM WEAP') then
+    if ContainsStr('ALCH AMMO APPA ARMO BOOK CLOT INGR KEYM LIGH MISC SGST SLGM WEAP', sSignature) then
     begin
       EvaluateByPath(e, m, 'EDID');
       EvaluateByPath(e, m, 'DATA');
 
-      if ContainsStr(sSignature, 'ARMO WEAP') then
+      if ContainsStr('ARMO WEAP', sSignature) then
         EvaluateByPath(e, m, 'DNAM')
 
       else if sSignature = 'WEAP' then
@@ -2013,7 +2015,7 @@ begin
   // Bookmark: Text
   else if (g_Tag = 'Text') then
   begin
-    if ContainsStr(sSignature, 'ALCH AMMO APPA ARMO AVIF BOOK BSGN CHAL CLAS IMOD LSCR MESG MGEF PERK SCRL SHOU SKIL SPEL TERM WEAP') then
+    if ContainsStr('ALCH AMMO APPA ARMO AVIF BOOK BSGN CHAL CLAS IMOD LSCR MESG MGEF PERK SCRL SHOU SKIL SPEL TERM WEAP', sSignature) then
       EvaluateByPath(e, m, 'DESC')
 
     else if not wbIsOblivion then begin
